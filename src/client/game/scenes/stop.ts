@@ -150,7 +150,7 @@ export function stopScene(game: Game): Scene {
             t(`in.${boss.id}.name`),
             t(`in.${boss.id}.desc`),
             C.blow1,
-            `«${t(`in.${boss.id}.quote`)}»`,
+            `"${t(`in.${boss.id}.quote`)}"`,
           ),
         ),
       );
@@ -694,7 +694,7 @@ export function stopScene(game: Game): Scene {
   void tips(game, boss ? ['boss'] : ['select', 'score', 'overdrive', 'discard'], 236);
   if (boss) {
     sfx('bell');
-    game.pops.pop(`«${t(`in.${boss.id}.quote`)}»`, core.x + MID, core.y + 160, C.blow1);
+    game.pops.pop(`"${t(`in.${boss.id}.quote`)}"`, core.x + MID, core.y + 160, C.blow1);
   }
 
   let time = 0;

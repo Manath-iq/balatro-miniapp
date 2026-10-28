@@ -176,8 +176,66 @@ export interface TextOpts {
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 const measureCtx = document.createElement('canvas').getContext('2d')!;
 
-function wrapLines(str: string, size: number, wrap: number | undefined): string[] {
+/** Pixel icons drawn in place of glyphs the font lacks (designed on the 8 px grid, scaled ×size/8). */
+const ICONS: Record<string, { rows: string[]; colors?: Record<string, string> }> = {
+  '◉': {
+    rows: ['.oooo.', 'oaAAao', 'oa..ao', 'oaaaao', '.oooo.'],
+    colors: { o: CSS.amber0, a: CSS.amber2, A: CSS.amber3 },
+  },
+  '▶': { rows: ['X...', 'XX..', 'XXX.', 'XX..', 'X...'] },
+  '◀': { rows: ['...X', '..XX', '.XXX', '..XX', '...X'] },
+  '⚡': { rows: ['..XX', '.XX.', 'XXXX', '.XX.', 'XX..'] },
+};
+const ICON_RE = /([◉▶◀⚡])/;
+
+function segments(line: string): string[] {
+  return line.split(ICON_RE).filter((x) => x !== '');
+}
+
+function measureLine(line: string, size: number): number {
   measureCtx.font = `${size}px ${FONT}`;
+  const k = size / 8;
+  let w = 0;
+  for (const seg of segments(line)) {
+    const icon = ICONS[seg];
+    w += icon ? (icon.rows[0]!.length + 1) * k : measureCtx.measureText(seg).width;
+  }
+  return w;
+}
+
+function drawLine(
+  ctx: CanvasRenderingContext2D,
+  line: string,
+  x: number,
+  base: number,
+  size: number,
+  color: string,
+  flat = false,
+): void {
+  const k = size / 8;
+  let cx = x;
+  for (const seg of segments(line)) {
+    const icon = ICONS[seg];
+    if (!icon) {
+      ctx.fillStyle = color;
+      ctx.fillText(seg, cx, base);
+      cx += measureCtx.measureText(seg).width;
+      continue;
+    }
+    const top = base - icon.rows.length * k;
+    icon.rows.forEach((row, j) => {
+      for (let i = 0; i < row.length; i++) {
+        const ch = row[i]!;
+        if (ch === '.') continue;
+        ctx.fillStyle = flat ? color : (icon.colors?.[ch] ?? color);
+        ctx.fillRect(cx + i * k, top + j * k, k, k);
+      }
+    });
+    cx += (icon.rows[0]!.length + 1) * k;
+  }
+}
+
+function wrapLines(str: string, size: number, wrap: number | undefined): string[] {
   const out: string[] = [];
   for (const para of str.split('\n')) {
     if (!wrap) {
@@ -187,7 +245,7 @@ function wrapLines(str: string, size: number, wrap: number | undefined): string[
     let line = '';
     for (const word of para.split(' ')) {
       const next = line ? `${line} ${word}` : word;
-      if (line && measureCtx.measureText(next).width > wrap) {
+      if (line && measureLine(next, size) > wrap) {
         out.push(line);
         line = word;
       } else line = next;
@@ -197,10 +255,6 @@ function wrapLines(str: string, size: number, wrap: number | undefined): string[
   return out;
 }
 
-/**
- * Pixel text rendered by us (not Pixi Text) so every platform uses the same Tiny5 metrics:
- * line box = size + 2, baseline at 0.875 × size. Draws a 1-px dark drop shadow into the same texture.
- */
 export function text(str: string, o: TextOpts = {}): Container & { set(s: string, color?: number): void } {
   const box = new Container() as Container & { set(s: string, color?: number): void };
   const sprite = new Sprite(Texture.EMPTY);
@@ -209,13 +263,11 @@ export function text(str: string, o: TextOpts = {}): Container & { set(s: string
   const draw = (s: string): void => {
     let size: number = o.size ?? 16;
     let lines = wrapLines(s, size, o.wrap);
-    measureCtx.font = `${size}px ${FONT}`;
-    let width = Math.max(1, ...lines.map((l) => Math.ceil(measureCtx.measureText(l).width)));
+    let width = Math.max(1, ...lines.map((l) => Math.ceil(measureLine(l, size))));
     if (o.fit !== undefined && width > o.fit && size > 8) {
       size = 8;
       lines = wrapLines(s, size, o.wrap);
-      measureCtx.font = `${size}px ${FONT}`;
-      width = Math.max(1, ...lines.map((l) => Math.ceil(measureCtx.measureText(l).width)));
+      width = Math.max(1, ...lines.map((l) => Math.ceil(measureLine(l, size))));
     }
     const lineH = size + 2;
     const [cv, ctx] = canvas(width + 2, lines.length * lineH + 1);
@@ -224,15 +276,12 @@ export function text(str: string, o: TextOpts = {}): Container & { set(s: string
     const base = Math.round(size * 0.875);
     const ax = o.align === 'center' ? 0.5 : o.align === 'right' ? 1 : 0;
     lines.forEach((l, i) => {
-      const lw = measureCtx.measureText(l).width;
+      const lw = measureLine(l, size);
       const x = Math.round((width - lw) * ax);
       const y = i * lineH + base;
-      if (o.shadow !== false) {
-        ctx.fillStyle = CSS.night0;
-        ctx.fillText(l, x + 1, y + 1);
-      }
-      ctx.fillStyle = hex(color);
-      ctx.fillText(l, x, y);
+      measureCtx.font = `${size}px ${FONT}`;
+      if (o.shadow !== false) drawLine(ctx, l, x + 1, y + 1, size, CSS.night0, true);
+      drawLine(ctx, l, x, y, size, hex(color));
     });
     const old = sprite.texture;
     sprite.texture = tex(cv);

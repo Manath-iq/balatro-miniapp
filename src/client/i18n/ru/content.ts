@@ -1,8 +1,8 @@
 // i18n namespace 'content' (ru).
 export default {
-  'cp.copper.name': 'Талон «Медь»',
+  'cp.copper.name': 'Талон Медь',
   'cp.copper.desc': '1–2 карты получают пробивку Медь',
-  'cp.neon.name': 'Талон «Неон»',
+  'cp.neon.name': 'Талон Неон',
   'cp.neon.desc': 'Карта получает пробивку Неон',
   'cp.scrap.name': 'Утиль',
   'cp.scrap.desc': 'Удалить 1–2 карты из колоды',

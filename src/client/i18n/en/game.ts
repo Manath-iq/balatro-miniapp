@@ -108,4 +108,6 @@ export default {
   'tut.kiosk':
     'Kiosk: passengers cost tokens, sit in your Cabin and power up your hands. SHIFT rolls the belt.',
   'tut.boss': 'The inspector changes the rules of this stop. Tap his sign to read them.',
+  'kiosk.belt': 'CONVEYOR',
+  'btn.workshopShort': 'PUNCH',
 } as const satisfies Record<string, string>;
