@@ -92,7 +92,7 @@ export function menuScene(game: Game): Scene {
       }),
     );
     const snd = add(
-      new Button(`${t('menu.sound')}: ${settings.sound ? t('menu.on') : t('menu.off')}`, 120, 22, {
+      new Button(`${t('menu.sound')}: ${settings.sound ? t('menu.on') : t('menu.off')}`, 150, 26, {
         onTap: () => {
           settings.sound = !settings.sound;
           saveSettings();
@@ -101,9 +101,12 @@ export function menuScene(game: Game): Scene {
       }),
     );
     add(
-      new Button(`${t('menu.lang')}: ${getLang().toUpperCase()}`, 120, 22, {
+      new Button(`${t('menu.lang')}: ${getLang().toUpperCase()}`, 150, 26, {
         onTap: () => {
           setLang(getLang() === 'ru' ? 'en' : 'ru');
+          try {
+            localStorage.setItem('lt.lang', getLang());
+          } catch {}
           game.show('menu');
         },
       }),
@@ -133,7 +136,7 @@ export function menuScene(game: Game): Scene {
       [2, 'valya'],
     ] as const) {
       add(
-        new Button(t(`dr.${id}.name`), 200, 28, {
+        new Button(t(`dr.${id}.name`), 220, 32, {
           fill: C.night3,
           edge: C.amber2,
           size: 16,
@@ -147,12 +150,12 @@ export function menuScene(game: Game): Scene {
             }),
         }),
       );
-      const d = text(t(`dr.${id}.desc`), { align: 'center', color: C.night7, wrap: 220 });
+      const d = text(t(`dr.${id}.desc`), { align: 'center', color: C.night7, wrap: 240 });
       d.position.set(135, y - 4);
       btns.addChild(d);
-      y += 16;
+      y += d.height + 6;
     }
-    add(new Button(t('btn.cancel'), 100, 22, { onTap: showMain }));
+    add(new Button(t('btn.cancel'), 120, 26, { onTap: showMain }));
   };
 
   showMain();

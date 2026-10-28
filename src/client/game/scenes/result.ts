@@ -35,17 +35,17 @@ export function resultScene(game: Game): Scene {
   ];
   if (s.stats.ringStop) lines.push(`${t('stop.ring')}: ${s.stats.ringStop}`);
   lines.forEach((l, i) => {
-    const tl = text(l, { align: 'center', color: C.paper1 });
-    tl.position.set(135, 80 + i * 16);
+    const tl = text(l, { align: 'center', color: C.paper1, fit: 262 });
+    tl.position.set(135, 80 + i * 22);
     root.addChild(tl);
   });
 
-  let y = 80 + lines.length * 16 + 24;
+  let y = 80 + lines.length * 22 + 20;
   if (depot) {
-    const q = text(t('result.depot'), { align: 'center', color: C.volt2 });
+    const q = text(t('result.depot'), { align: 'center', color: C.volt2, wrap: 250 });
     q.position.set(135, y);
     root.addChild(q);
-    y += 18;
+    y += q.height + 8;
     if (game.legal()?.ring) {
       const ring = new Button(t('btn.ring'), 170, 30, {
         fill: C.volt0,
@@ -60,7 +60,7 @@ export function resultScene(game: Game): Scene {
       root.addChild(ring);
       y += 38;
     }
-    const end = new Button(t('btn.end'), 170, 26, {
+    const end = new Button(t('btn.end'), 170, 30, {
       onTap: () => {
         game.act({ t: 'end' });
         game.sync(true);

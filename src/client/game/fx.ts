@@ -102,7 +102,7 @@ export class Particles {
 export class Pops {
   readonly layer = new Container();
   private list: { c: Container; vy: number; life: number; s: Spring }[] = [];
-  pop(str: string, x: number, y: number, color: number, size: 8 | 16 = 8): void {
+  pop(str: string, x: number, y: number, color: number, size: 8 | 16 | 24 = 16): void {
     const c = text(str, { size, color, align: 'center' });
     c.position.set(Math.round(x), Math.round(y));
     const s = new Spring(0.2, 420, 0.4);

@@ -55,7 +55,11 @@ export class Game {
 
   async start(factories: Record<string, SceneFactory>): Promise<void> {
     this.factories = factories;
-    setLang(lang());
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem('lt.lang');
+    } catch {}
+    setLang(saved === 'ru' || saved === 'en' ? saved : lang());
     setupTelegram(CSS.night1);
     await document.fonts.load('8px Tiny5').catch(() => undefined);
     this.screen = measure(this.root);

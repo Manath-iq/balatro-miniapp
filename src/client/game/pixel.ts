@@ -79,24 +79,24 @@ export function cardTexture(c: Pick<Card, 'rank' | 'suit' | 'punch' | 'charge'>)
   for (let x = 4; x < W - 4; x += 3) ctx.fillRect(x, 3, 1, 1);
 
   const col = SUIT_CSS[c.suit]!;
-  ctx.font = `8px ${FONT}`;
+  ctx.font = `16px ${FONT}`;
   ctx.textBaseline = 'top';
   ctx.fillStyle = col;
   const label = rankLabel(c.rank);
-  ctx.fillText(label, 4, 5);
-  drawSuit(ctx, c.suit, 4, 14);
+  ctx.fillText(label, 3, 2);
+  drawSuit(ctx, c.suit, 4, 19);
   ctx.save();
   ctx.translate(W, H);
   ctx.rotate(Math.PI);
-  ctx.fillText(label, 4, 5);
-  drawSuit(ctx, c.suit, 4, 14);
+  ctx.fillText(label, 3, 2);
+  drawSuit(ctx, c.suit, 4, 19);
   ctx.restore();
 
   const cx = Math.floor(W / 2);
   const cy = Math.floor(H / 2);
   if (c.rank >= 11 && c.rank <= 13) {
     ctx.fillStyle = CSS.night3;
-    ctx.fillRect(cx - 12, cy - 15, 24, 30);
+    ctx.fillRect(cx - 12, cy - 13, 24, 28);
     ctx.fillStyle = col === CSS.suitSpade ? CSS.night6 : col;
     ctx.fillRect(cx - 11, cy - 14, 22, 1);
     ctx.fillRect(cx - 11, cy + 13, 22, 1);
@@ -165,6 +165,8 @@ export function panel(w: number, h: number, fill = C.night2, edge = C.night5, hi
 
 export interface TextOpts {
   size?: 8 | 16 | 24;
+  /** Max width: falls back to 8px if the text does not fit. */
+  fit?: number;
   color?: number;
   align?: 'left' | 'center' | 'right';
   shadow?: boolean;
@@ -173,7 +175,7 @@ export interface TextOpts {
 
 /** Pixel text with a 1-px dark drop shadow. Anchor follows align. */
 export function text(str: string, o: TextOpts = {}): Container & { set(s: string, color?: number): void } {
-  const size = o.size ?? 8;
+  const size = o.size ?? 16;
   const style = {
     fontFamily: FONT,
     fontSize: size,
@@ -203,10 +205,26 @@ export function text(str: string, o: TextOpts = {}): Container & { set(s: string
   sh.position.set(1, 1);
   sh.visible = o.shadow !== false;
   box.addChild(sh, main);
+  const fit = (): void => {
+    if (o.fit === undefined) return;
+    const small = main.width > o.fit;
+    const fs = small ? 8 : size;
+    if (main.style.fontSize !== fs) {
+      main.style.fontSize = fs;
+      sh.style.fontSize = fs;
+      main.style.lineHeight = fs + 2;
+      sh.style.lineHeight = fs + 2;
+      main.style.wordWrapWidth = o.wrap ?? 0;
+    }
+  };
   box.set = (s: string, color?: number) => {
+    main.style.fontSize = size;
+    sh.style.fontSize = size;
     main.text = s;
     sh.text = s;
     if (color !== undefined) main.style.fill = color;
+    fit();
   };
+  fit();
   return box;
 }

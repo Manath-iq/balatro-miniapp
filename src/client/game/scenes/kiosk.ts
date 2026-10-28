@@ -49,15 +49,15 @@ export function kioskScene(game: Game): Scene {
     });
     const k = s.kiosk!;
     const L = game.legal()!;
-    const head = text(t('kiosk.title'), { size: 16, color: C.amber2 });
+    const head = text(t('kiosk.title'), { size: 24, color: C.amber2 });
     head.position.set(4, 4);
-    const tok = text(`◉ ${s.tokens}`, { size: 16, align: 'right', color: C.amber3 });
+    const tok = text(`◉ ${s.tokens}`, { size: 24, align: 'right', color: C.amber3 });
     tok.position.set(266, 4);
     body.addChild(head, tok);
 
     // Cabin with drop-off.
     s.cabin.forEach((seat, i) => {
-      const tile = new SeatTile(seat?.code ?? null, 58, 24, () => {
+      const tile = new SeatTile(seat?.code ?? null, 88, 30, () => {
         if (!seat) return;
         const d = passenger(seat.code);
         const sh = infoSheet(
@@ -67,7 +67,7 @@ export function kioskScene(game: Game): Scene {
           RARITY_COLOR[d.rarity],
           t(`p.${d.id}.flavor`),
         );
-        const sell = new Button(`${t('btn.sell')} +${Math.floor(d.price / 2)}`, 110, 20, {
+        const sell = new Button(`${t('btn.sell')} +${Math.floor(d.price / 2)}`, 120, 22, {
           fill: C.blow0,
           edge: C.blow1,
           onTap: () => {
@@ -76,72 +76,77 @@ export function kioskScene(game: Game): Scene {
             draw();
           },
         });
-        sell.position.set(146, 4);
+        sell.position.set(136, 2);
         sh.addChild(sell);
         showSheet(sh);
       });
-      tile.position.set((i % 3) * 60, 26 + Math.floor(i / 3) * 26);
+      tile.position.set((i % 3) * 91, 30 + Math.floor(i / 3) * 32);
       body.addChild(tile);
     });
     // Pocket
     s.pocket.forEach((code, i) => {
       const box = new Container();
-      box.position.set(184 + (i % 2) * 44, 26);
-      box.addChild(panel(42, 24, code ? C.night3 : C.night1, code ? C.amber1 : C.night3));
+      box.position.set(i * 68, 96);
+      box.addChild(panel(66, 22, code ? C.night3 : C.night1, code ? C.amber1 : C.night3));
       if (code) {
-        const l = text(t(`cp.${coupon(code).id}.name`).replace('Талон ', ''), { color: C.amber3, wrap: 38 });
+        const l = text(t(`cp.${coupon(code).id}.name`).replace('Талон ', ''), { color: C.amber3, fit: 60 });
         l.position.set(3, 3);
         box.addChild(l);
       }
       body.addChild(box);
     });
-    const pig = text(t('kiosk.piggy', { n: s.piggy }), { color: C.glass3 });
-    pig.position.set(184, 56);
+    const pig = text(t('kiosk.piggy', { n: s.piggy }), { color: C.glass3, fit: 128 });
+    pig.position.set(140, 99);
     body.addChild(pig);
 
     // Conveyor
-    let y = 82;
+    let y = 122;
     k.slots.forEach((it, i) => {
       const row = new Container();
       row.position.set(0, y);
       if (!it) {
-        row.addChild(panel(270, 40, C.night1, C.night3, C.night1));
+        row.addChild(panel(270, 26, C.night1, C.night3, C.night1));
         const e = text(t('kiosk.empty'), { align: 'center', color: C.night5 });
-        e.position.set(135, 16);
+        e.position.set(135, 5);
         row.addChild(e);
-      } else {
-        const info = itemInfo(it);
-        row.addChild(panel(270, 40, C.night2, info.color, C.night3));
-        if (it.k === 'card') {
-          const sp = new Sprite(cardTexture({ rank: it.rank, suit: it.suit, punch: it.punch, charge: 0 }));
-          sp.scale.set(0.5);
-          sp.position.set(4, 3);
-          row.addChild(sp);
-        }
-        const nx = it.k === 'card' ? 32 : 6;
-        const n = text(info.name, { color: info.color });
-        n.position.set(nx, 4);
-        const d = text(info.desc, { color: C.paper1, wrap: 190 - nx });
-        d.position.set(nx, 15);
-        const b = new Button(`${it.price} ◉`, 62, 22, {
-          fill: C.amber0,
-          edge: C.amber2,
-          onTap: () => {
-            game.act({ t: 'buy', slot: i });
-            sfx('coin');
-            draw();
-          },
-        });
-        b.setEnabled(!!L.buy[i]);
-        b.position.set(202, 9);
-        row.addChild(n, d, b);
+        body.addChild(row);
+        y += 28;
+        return;
       }
+      const info = itemInfo(it);
+      const nx = it.k === 'card' ? 30 : 6;
+      const n = text(info.name, { color: info.color, fit: 196 - nx });
+      n.position.set(nx, 3);
+      let d = text(info.desc, { color: C.paper1, wrap: 196 - nx });
+      if (d.height > 36) d = text(info.desc, { size: 8, color: C.paper1, wrap: 196 - nx });
+      d.position.set(nx, 21);
+      const h = Math.max(34, 24 + d.height);
+      row.addChild(panel(270, h, C.night2, info.color, C.night3));
+      if (it.k === 'card') {
+        const sp = new Sprite(cardTexture({ rank: it.rank, suit: it.suit, punch: it.punch, charge: 0 }));
+        sp.scale.set(0.5);
+        sp.position.set(3, 2);
+        row.addChild(sp);
+      }
+      const b = new Button(`${it.price} ◉`, 62, 26, {
+        fill: C.amber0,
+        edge: C.amber2,
+        onTap: () => {
+          game.act({ t: 'buy', slot: i });
+          sfx('coin');
+          draw();
+        },
+      });
+      b.setEnabled(!!L.buy[i]);
+      b.position.set(204, Math.floor((h - 26) / 2));
+      row.addChild(n, d, b);
       body.addChild(row);
-      y += 44;
+      y += h + 2;
     });
+    y += 4;
 
     // Actions
-    const shift = new Button(`${t('btn.shift')} ${L.shiftCost}◉`, 84, 22, {
+    const shift = new Button(`${t('btn.shift')} ${L.shiftCost}◉`, 86, 24, {
       onTap: () => {
         game.act({ t: 'shift' });
         sfx('shift');
@@ -150,18 +155,18 @@ export function kioskScene(game: Game): Scene {
     });
     shift.setEnabled(L.shift);
     shift.position.set(0, y);
-    const ws = new Button(`${t('btn.workshop')} ${SHOP.workshopPrice}◉`, 92, 22, {
+    const ws = new Button(`${t('btn.workshop')} ${SHOP.workshopPrice}◉`, 92, 24, {
       onTap: () => pickCard('workshop'),
     });
     ws.setEnabled(L.workshop);
     ws.position.set(88, y);
-    const sc = new Button(`${t('btn.scrap')} ${SHOP.scrapPrice}◉`, 86, 22, {
+    const sc = new Button(`${t('btn.scrap')} ${SHOP.scrapPrice}◉`, 86, 24, {
       onTap: () => pickCard('scrap'),
     });
     sc.setEnabled(L.scrap);
     sc.position.set(184, y);
     y += 26;
-    const pg = new Button(t('btn.piggy'), 110, 22, {
+    const pg = new Button(t('btn.piggy'), 130, 24, {
       onTap: () => {
         game.act({ t: 'piggy', deposit: 1 });
         sfx('coin');
@@ -170,14 +175,14 @@ export function kioskScene(game: Game): Scene {
     });
     pg.setEnabled(L.piggy);
     pg.position.set(0, y);
-    const pb = new Button(t('btn.piggyBreak'), 70, 22, {
+    const pb = new Button(t('btn.piggyBreak'), 90, 24, {
       onTap: () => {
         game.act({ t: 'piggyBreak' });
         draw();
       },
     });
     pb.setEnabled(s.piggy > 0);
-    pb.position.set(114, y);
+    pb.position.set(134, y);
     body.addChild(shift, ws, sc, pg, pb);
 
     const leave = new Button(t('btn.leave'), 150, 30, {
@@ -189,14 +194,14 @@ export function kioskScene(game: Game): Scene {
         game.sync();
       },
     });
-    leave.position.set(60, Math.max(y + 30, core.h - 32));
+    leave.position.set(60, Math.max(y + 28, core.h - 32));
     body.addChild(leave);
   };
 
   const showSheet = (c: Container) => {
     closeSheet();
     sheet = c;
-    c.position.set(4, Math.min(core.h - c.height - 40, 150));
+    c.position.set(4, 122);
     root.addChild(c);
   };
 
@@ -262,25 +267,26 @@ export function rewardScene(game: Game): Scene {
   const core = game.core;
   root.position.set(core.x, core.y);
   game.bg.setMood('kiosk');
-  const head = text(t('reward.title'), { size: 16, align: 'center', color: C.go1 });
+  const head = text(t('reward.title'), { size: 24, align: 'center', color: C.go1 });
   head.position.set(135, 10);
-  const sub = text(t('reward.sub'), { align: 'center', color: C.paper1 });
-  sub.position.set(135, 32);
+  const sub = text(t('reward.sub'), { align: 'center', color: C.paper1, wrap: 260 });
+  sub.position.set(135, 36);
   root.addChild(head, sub);
   const L = game.legal()!;
-  let y = 52;
+  let y = 76;
   s.reward!.offers.forEach((code, i) => {
     const d = passenger(code);
     const c = new Container();
     c.position.set(0, y);
-    c.addChild(panel(270, 62, C.night1, RARITY_COLOR[d.rarity], C.night3));
-    const n = text(t(`p.${d.id}.name`), { size: 16, color: RARITY_COLOR[d.rarity] });
+    const n = text(t(`p.${d.id}.name`), { color: RARITY_COLOR[d.rarity], fit: 190 });
     n.position.set(8, 5);
-    const ds = text(t(`p.${d.id}.desc`), { color: C.paper1, wrap: 180 });
+    const ds = text(t(`p.${d.id}.desc`), { color: C.paper1, wrap: 186 });
     ds.position.set(8, 24);
-    const fl = text(t(`p.${d.id}.flavor`), { color: C.night7, wrap: 180 });
-    fl.position.set(8, 46);
-    const b = new Button(t('btn.take'), 66, 22, {
+    const fl = text(t(`p.${d.id}.flavor`), { size: 8, color: C.night7, wrap: 186 });
+    fl.position.set(8, 28 + ds.height);
+    const h = 36 + ds.height + fl.height;
+    c.addChild(panel(270, h, C.night1, RARITY_COLOR[d.rarity], C.night3));
+    const b = new Button(t('btn.take'), 70, 26, {
       fill: C.glass1,
       edge: C.go1,
       onTap: () => {
@@ -290,23 +296,23 @@ export function rewardScene(game: Game): Scene {
       },
     });
     b.setEnabled(!!L.reward[i]);
-    b.position.set(196, 20);
+    b.position.set(196, Math.floor((h - 26) / 2));
     c.addChild(n, ds, fl, b);
     root.addChild(c);
-    y += 68;
+    y += h + 6;
   });
   if (!s.reward!.offers.length || L.reward.every((v) => !v)) {
     const full = text(t('kiosk.cabinFull'), { align: 'center', color: C.blow1 });
     full.position.set(135, y);
     root.addChild(full);
   }
-  const skip = new Button(t('btn.skip'), 120, 26, {
+  const skip = new Button(t('btn.skip'), 140, 28, {
     onTap: () => {
       game.act({ t: 'reward', pick: 15 });
       game.sync();
     },
   });
-  skip.position.set(75, y + 20);
+  skip.position.set(65, y + 16);
   root.addChild(skip);
   return { root };
 }

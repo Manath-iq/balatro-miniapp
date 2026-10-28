@@ -28,7 +28,12 @@ export class Button extends Container {
     this.bw = w;
     this.bh = h;
     this.bg = new Graphics();
-    this.caption = text(str, { size: opts.size ?? 8, color: opts.color ?? C.paper2, align: 'center' });
+    this.caption = text(str, {
+      size: opts.size ?? 16,
+      fit: w - 6,
+      color: opts.color ?? C.paper2,
+      align: 'center',
+    });
     this.addChild(this.bg, this.caption);
     this.draw(false);
     this.eventMode = 'static';
@@ -96,7 +101,7 @@ export class SeatTile extends Container {
           .rect(w - 1, y, 1, 1)
           .fill(C.night4);
       const l = text(t('seat.empty'), { color: C.night5, align: 'center', shadow: false });
-      l.position.set(w / 2, h / 2 - 4);
+      l.position.set(w / 2, h / 2 - 8);
       this.addChild(g, l);
     } else {
       const def = passenger(code);
@@ -104,7 +109,8 @@ export class SeatTile extends Container {
       this.addChild(panel(w, h, C.night3, col, C.night4));
       const g = new Graphics().rect(2, 2, 3, h - 4).fill(col);
       const name = text(t(`p.${def.id}.name`), { color: C.paper2, wrap: w - 9 });
-      name.position.set(7, 3);
+      if (name.height > h - 2) name.set(t(`p.${def.id}.name`).split(' ')[0]!);
+      name.position.set(7, Math.max(1, Math.floor((h - name.height) / 2)));
       this.addChild(g, name);
     }
     if (onTap) {
@@ -121,14 +127,14 @@ export function infoSheet(w: number, title: string, body: string, color: number,
   const c = new Container();
   const lines = text(body, { wrap: w - 16, color: C.paper1 });
   const ex = extra ? text(extra, { wrap: w - 16, color: C.night7 }) : null;
-  const h = 24 + lines.height + (ex ? ex.height + 6 : 0) + 6;
+  const h = 30 + lines.height + (ex ? ex.height + 6 : 0) + 6;
   c.addChild(panel(w, h, C.night1, color, C.night3));
   const tt = text(title, { color });
   tt.position.set(8, 6);
-  lines.position.set(8, 18);
+  lines.position.set(8, 26);
   c.addChild(tt, lines);
   if (ex) {
-    ex.position.set(8, 18 + lines.height + 4);
+    ex.position.set(8, 26 + lines.height + 4);
     c.addChild(ex);
   }
   return c;
