@@ -9,6 +9,7 @@ import type { Game, Scene } from '../app';
 import { haptic, sfx } from '../feel';
 import { pace, Spring, wait } from '../fx';
 import { CARD_H, CARD_W, cardTexture, panel, rankLabel, text } from '../pixel';
+import { tips } from '../tutorial';
 import { Button, infoSheet, SeatTile } from '../ui';
 
 class CardView extends Container {
@@ -674,6 +675,7 @@ export function stopScene(game: Game): Scene {
   layoutHand();
   drawGauge();
   refreshControls();
+  void tips(game, boss ? ['boss'] : ['select', 'score', 'overdrive', 'discard'], 236);
   if (boss) {
     sfx('bell');
     game.pops.pop(`«${t(`in.${boss.id}.quote`)}»`, core.x + MID, core.y + 160, C.blow1);

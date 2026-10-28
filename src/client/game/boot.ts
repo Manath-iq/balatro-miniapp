@@ -4,6 +4,7 @@ import { menuScene } from './scenes/menu';
 import { resultScene } from './scenes/result';
 import { routeScene } from './scenes/route';
 import { stopScene } from './scenes/stop';
+import { topScene } from './scenes/top';
 
 export async function startGame(root: HTMLElement): Promise<Game> {
   const game = new Game(root);
@@ -14,6 +15,7 @@ export async function startGame(root: HTMLElement): Promise<Game> {
     kiosk: kioskScene,
     reward: rewardScene,
     result: resultScene,
+    top: topScene,
   });
   if (import.meta.env.DEV) (window as unknown as { __game: Game }).__game = game;
   return game;

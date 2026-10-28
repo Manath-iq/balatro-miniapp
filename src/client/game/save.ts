@@ -12,15 +12,21 @@ import {
 
 const KEY = 'lt.run.v1';
 
+export interface ServerRun {
+  runId: string;
+  token: string;
+}
+
 interface Saved {
   seed: string;
   kind: RunConfig['kind'];
   driver: number;
   log: string;
   day?: string;
+  server?: ServerRun;
 }
 
-export function saveRun(cfg: RunConfig, actions: readonly Action[], day?: string): void {
+export function saveRun(cfg: RunConfig, actions: readonly Action[], day?: string, server?: ServerRun): void {
   try {
     const data: Saved = {
       seed: seedToHex(cfg.seed),
@@ -29,11 +35,12 @@ export function saveRun(cfg: RunConfig, actions: readonly Action[], day?: string
       log: toBase64Url(encodeLog(actions)),
     };
     if (day) data.day = day;
+    if (server) data.server = server;
     localStorage.setItem(KEY, JSON.stringify(data));
   } catch {}
 }
 
-export function loadRun(): { cfg: RunConfig; actions: Action[]; day?: string } | null {
+export function loadRun(): { cfg: RunConfig; actions: Action[]; day?: string; server?: ServerRun } | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;

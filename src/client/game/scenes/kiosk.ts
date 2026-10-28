@@ -8,6 +8,7 @@ import { t } from '../../i18n';
 import type { Game, Scene } from '../app';
 import { sfx } from '../feel';
 import { cardTexture, panel, rankLabel, text } from '../pixel';
+import { tips } from '../tutorial';
 import { Button, infoSheet, SeatTile } from '../ui';
 
 function itemInfo(it: KioskItem): { name: string; desc: string; color: number } {
@@ -258,6 +259,7 @@ export function kioskScene(game: Game): Scene {
   };
 
   draw();
+  void tips(game, ['kiosk'], 40);
   return { root };
 }
 

@@ -2,13 +2,16 @@
 import { Application, Container } from 'pixi.js';
 import {
   type Action,
+  encodeLog,
   type GameEvent,
   legal,
   newRun,
   type RunConfig,
   type RunState,
   step,
+  toBase64Url,
 } from '../../engine';
+import type { SubmitRes } from '../../shared/api';
 import { C, CSS } from '../gfx/palette';
 import { setLang } from '../i18n';
 import {
@@ -22,7 +25,8 @@ import {
 import { Background } from './bg';
 import { setAudioActive, unlockAudio } from './feel';
 import { Particles, Pops, Shake } from './fx';
-import { clearRun, loadRun, recordBest, saveRun } from './save';
+import { api } from './net';
+import { clearRun, loadRun, recordBest, type ServerRun, saveRun } from './save';
 import { fitCanvas, measure, type Screen } from './screen';
 
 export interface Scene {
@@ -38,6 +42,10 @@ export class Game {
   readonly bg = new Background();
   readonly world = new Container();
   readonly fxLayer = new Container();
+  /** Topmost layer for tutorial tips. */
+  readonly overlay = new Container();
+  /** Scene the leaderboard's back button returns to. */
+  backTo: string | undefined;
   readonly particles = new Particles();
   readonly pops = new Pops();
   readonly shake = new Shake();
@@ -76,7 +84,7 @@ export class Game {
     this.pixi.stage.addChild(this.bg.view);
     this.applySize();
     this.fxLayer.addChild(this.particles.layer, this.pops.layer);
-    this.pixi.stage.addChild(this.world, this.fxLayer);
+    this.pixi.stage.addChild(this.world, this.fxLayer, this.overlay);
     this.pixi.ticker.add((tk) => this.tick(tk.deltaMS / 1000));
     window.addEventListener('resize', () => this.relayout());
     onInsetsChanged(() => this.relayout());
@@ -124,6 +132,9 @@ export class Game {
     this.world.removeChildren().forEach((c) => {
       c.destroy({ children: true });
     });
+    this.overlay.removeChildren().forEach((c) => {
+      c.destroy({ children: true });
+    });
     const f = this.factories[name];
     if (!f) throw new Error(`no scene ${name}`);
     this.scene = f(this);
@@ -141,16 +152,43 @@ export class Game {
   }
   private current = 'menu';
 
-  startRun(cfg: RunConfig, day?: string): void {
+  startRun(cfg: RunConfig, day?: string, server?: ServerRun): void {
     this.cfg = cfg;
     this.actions = [];
     this.run = newRun(cfg).state;
     this.day = day;
+    this.server = server;
+    this.submission = null;
     setClosingConfirmation(true);
-    saveRun(cfg, this.actions, day);
+    saveRun(cfg, this.actions, day, server);
     this.sync(true);
   }
   day: string | undefined;
+  /** Present for ranked runs issued by the server. */
+  server: ServerRun | undefined;
+  /** Result of submitting the finished run (null for unranked runs). */
+  submission: Promise<SubmitRes | null> | null = null;
+
+  private submit(): void {
+    const s = this.run;
+    const srv = this.server;
+    if (!s || !srv) {
+      this.submission = Promise.resolve(null);
+      return;
+    }
+    const body = {
+      runId: srv.runId,
+      token: srv.token,
+      log: toBase64Url(encodeLog(this.actions)),
+      claimed: {
+        output: s.stats.output.toString(),
+        peak: s.stats.peak.toString(),
+        stops: s.stats.stopsCleared,
+        ringStop: s.stats.ringStop,
+      },
+    };
+    this.submission = api<SubmitRes>('/api/run/submit', body).catch(() => null);
+  }
 
   resume(): boolean {
     const saved = loadRun();
@@ -163,6 +201,7 @@ export class Game {
       this.actions = saved.actions;
       this.run = state;
       this.day = saved.day;
+      this.server = saved.server;
       setClosingConfirmation(true);
       this.sync(true);
       return true;
@@ -181,7 +220,8 @@ export class Game {
       recordBest(this.run.stats.stopsCleared, this.run.stats.peak);
       clearRun();
       setClosingConfirmation(false);
-    } else saveRun(this.cfg, this.actions, this.day);
+      this.submit();
+    } else saveRun(this.cfg, this.actions, this.day, this.server);
     return ev;
   }
 

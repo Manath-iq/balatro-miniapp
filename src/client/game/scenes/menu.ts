@@ -1,13 +1,16 @@
 import { Container } from 'pixi.js';
 import { seedFromHex } from '../../../engine';
+import type { StartRes } from '../../../shared/api';
 import { C } from '../../gfx/palette';
 import { getLang, setLang, t } from '../../i18n';
 import { formatPower } from '../../i18n/format';
 import type { Game, Scene } from '../app';
 import { saveSettings, settings, sfx } from '../feel';
 import { Spring } from '../fx';
+import { ApiFail, api, online } from '../net';
 import { text } from '../pixel';
 import { bestLocal, loadRun } from '../save';
+import { resetTutorial } from '../tutorial';
 import { Button } from '../ui';
 
 function randomSeedHex(): string {
@@ -59,6 +62,48 @@ export function menuScene(game: Game): Scene {
     return b;
   };
 
+  let note: ReturnType<typeof text> | null = null;
+  const say = (str: string, color: number = C.amber2) => {
+    note?.destroy();
+    note = text(str, { align: 'center', color, wrap: 240 });
+    note.position.set(129, 136);
+    root.addChild(note);
+  };
+  let busy = false;
+  /** Asks the server for a seed (ranked); falls back to a local seed (unranked) outside Telegram or offline. */
+  const begin = async (kind: 'standard' | 'daily', driver: number) => {
+    if (busy) return;
+    busy = true;
+    if (online()) {
+      say(t('menu.loading'), C.night7);
+      try {
+        const r = await api<StartRes>('/api/run/start', { kind, driver });
+        game.startRun(
+          { seed: seedFromHex(r.seed), kind: r.kind, driver: r.driver, grade: 1, condition: 0 },
+          r.day ?? undefined,
+          { runId: r.runId, token: r.token },
+        );
+        return;
+      } catch (e) {
+        busy = false;
+        if (e instanceof ApiFail && e.code === 'daily_taken') {
+          say(t('menu.dailyTaken'), C.go1);
+          return;
+        }
+      }
+    }
+    busy = false;
+    say(t('menu.offline'), C.night7);
+    if (kind === 'daily') {
+      const day = mskDay();
+      game.startRun(
+        { seed: seedFromHex(await dailySeedHex(day)), kind: 'daily', driver: 1, grade: 1, condition: 0 },
+        day,
+      );
+    } else
+      game.startRun({ seed: seedFromHex(randomSeedHex()), kind: 'standard', driver, grade: 1, condition: 0 });
+  };
+
   const showMain = () => {
     btns.removeChildren().forEach((c) => {
       c.destroy({ children: true });
@@ -91,6 +136,17 @@ export function menuScene(game: Game): Scene {
         },
       }),
     );
+    add(
+      new Button(t('menu.top'), 180, 30, {
+        fill: C.glass1,
+        edge: C.glass3,
+        size: 16,
+        onTap: () => {
+          game.backTo = 'menu';
+          game.show('top');
+        },
+      }),
+    );
     const snd = add(
       new Button(`${t('menu.sound')}: ${settings.sound ? t('menu.on') : t('menu.off')}`, 150, 26, {
         onTap: () => {
@@ -108,6 +164,14 @@ export function menuScene(game: Game): Scene {
             localStorage.setItem('lt.lang', getLang());
           } catch {}
           game.show('menu');
+        },
+      }),
+    );
+    add(
+      new Button(t('menu.howto'), 150, 26, {
+        onTap: () => {
+          resetTutorial();
+          say(t('tut.select'), C.paper1);
         },
       }),
     );

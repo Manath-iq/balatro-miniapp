@@ -6,6 +6,7 @@ import { formatPower } from '../../i18n/format';
 import type { Game, Scene } from '../app';
 import { sfx } from '../feel';
 import { panel, text } from '../pixel';
+import { tips } from '../tutorial';
 import { Button, SeatTile } from '../ui';
 
 export function routeScene(game: Game): Scene {
@@ -131,5 +132,6 @@ export function routeScene(game: Game): Scene {
   });
   quit.position.set(0, core.h - 22);
   root.addChild(quit);
+  if (opts[0]?.kind === 'branch') void tips(game, ['route']);
   return { root };
 }

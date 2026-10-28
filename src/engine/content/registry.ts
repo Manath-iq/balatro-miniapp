@@ -76,7 +76,10 @@ const fingerprint = (items: readonly { id: string; code: number; v1: boolean }[]
  */
 export const CONTENT_HASH: number = fnv1a(
   canonical({
-    balance,
+    // Sorted explicitly: bundlers order module-namespace keys differently.
+    balance: Object.keys(balance)
+      .sort()
+      .map((k) => [k, (balance as Record<string, unknown>)[k]]),
     passengers: PASSENGERS.map((p) => `${p.code}:${p.id}:${p.v1 ? 1 : 0}:${p.rarity}:${p.price}`),
     coupons: COUPONS.map((c) => `${c.code}:${c.id}:${c.v1 ? 1 : 0}:${c.price}`),
     punches: fingerprint(PUNCHES),
