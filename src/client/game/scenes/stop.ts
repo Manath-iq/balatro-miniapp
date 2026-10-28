@@ -56,7 +56,9 @@ export function stopScene(game: Game): Scene {
   const W = 258;
   const MID = 119; // centre of the play column (the gauge sits on the right)
   const H = core.h;
-  const st = () => s.stop!;
+  // The engine nulls s.stop the moment a hand clears the stop, while the cascade is still animating it.
+  const stop0 = s.stop!;
+  const st = () => s.stop ?? stop0;
   const boss = st().boss ? inspector(st().boss) : null;
   const line = Math.min(3, Math.ceil(s.stopNo / 4));
   game.bg.setMood(boss ? 'boss' : (`line${line}` as 'line1'));
@@ -412,6 +414,20 @@ export function stopScene(game: Game): Scene {
   ];
 
   async function run(events: GameEvent[]): Promise<void> {
+    try {
+      await animate(events);
+    } catch (e) {
+      console.error(e);
+      busy = false;
+      if (s.phase !== 'stop') game.sync();
+      else {
+        layoutHand();
+        refreshControls();
+      }
+    }
+  }
+
+  async function animate(events: GameEvent[]): Promise<void> {
     busy = true;
     refreshControls();
     let step = 0;
