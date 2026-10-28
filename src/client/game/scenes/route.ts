@@ -116,10 +116,10 @@ export function routeScene(game: Game): Scene {
 
   // Cabin (swap is free outside stops; tap a seat to drop off passengers in the kiosk).
   const cab = new Container();
-  cab.position.set(0, Math.min(core.h - 108, y + 4));
+  cab.position.set(0, Math.min(core.h - 72, y + 4));
   s.cabin.forEach((seat, i) => {
-    const tile = new SeatTile(seat?.code ?? null, 84, 38);
-    tile.position.set((i % 3) * 87, Math.floor(i / 3) * 40);
+    const tile = new SeatTile(seat?.code ?? null, 44, 44);
+    tile.position.set(i * 43, 0);
     cab.addChild(tile);
   });
   root.addChild(cab);

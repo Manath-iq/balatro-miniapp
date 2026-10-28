@@ -22,6 +22,7 @@ import {
   setClosingConfirmation,
   setupTelegram,
 } from '../platform/tg';
+import { loadArt } from './art';
 import { Background } from './bg';
 import { setAudioActive, unlockAudio } from './feel';
 import { Particles, Pops, Shake } from './fx';
@@ -70,6 +71,7 @@ export class Game {
     setLang(saved === 'ru' || saved === 'en' ? saved : lang());
     setupTelegram(CSS.night1);
     await document.fonts.load('8px Tiny5').catch(() => undefined);
+    await loadArt().catch(() => undefined);
     this.screen = measure(this.root);
     await this.pixi.init({
       width: this.screen.w,

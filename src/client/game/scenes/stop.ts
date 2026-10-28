@@ -6,6 +6,7 @@ import { C } from '../../gfx/palette';
 import { t } from '../../i18n';
 import { formatPower, formatShort } from '../../i18n/format';
 import type { Game, Scene } from '../app';
+import { portrait } from '../art';
 import { haptic, sfx } from '../feel';
 import { pace, Spring, wait } from '../fx';
 import { CARD_H, CARD_W, cardTexture, panel, rankLabel, text } from '../pixel';
@@ -110,7 +111,7 @@ export function stopScene(game: Game): Scene {
   const openSheet = (c: Container) => {
     closeSheet();
     sheet = c;
-    c.position.set(0, 160);
+    c.position.set(0, 148);
     c.eventMode = 'static';
     c.on('pointertap', closeSheet);
     sheetLayer.addChild(c);
@@ -122,7 +123,7 @@ export function stopScene(game: Game): Scene {
     });
     seatTiles.length = 0;
     s.cabin.forEach((seat, i) => {
-      const tile = new SeatTile(seat?.code ?? null, 84, 36, () => {
+      const tile = new SeatTile(seat?.code ?? null, 44, 44, () => {
         if (!seat) return;
         const def = passenger(seat.code);
         sfx('tap');
@@ -130,17 +131,28 @@ export function stopScene(game: Game): Scene {
           infoSheet(W, t(`p.${def.id}.name`), t(`p.${def.id}.desc`), C.volt2, t(`p.${def.id}.flavor`)),
         );
       });
-      tile.position.set((i % 3) * 87, Math.floor(i / 3) * 39);
+      tile.position.set((i % 3) * 46, Math.floor(i / 3) * 46);
       cabin.addChild(tile);
       seatTiles[i] = tile;
     });
     // boss / stop card
     const side = new Container();
-    side.position.set(0, 78);
-    const bossBox = panel(126, 22, boss ? C.blow0 : C.night2, boss ? C.blow1 : C.night4);
-    const bl = text(boss ? t(`in.${boss.id}.name`) : t(`stop.${st().kind}`), { color: C.paper2, fit: 118 });
-    bl.position.set(4, 3);
-    side.addChild(bossBox, bl);
+    side.position.set(140, 0);
+    const bossBox = panel(118, 44, boss ? C.blow0 : C.night2, boss ? C.blow1 : C.night4);
+    side.addChild(bossBox);
+    const face = boss ? portrait(boss.id) : undefined;
+    if (face) {
+      const sp = new Sprite(face);
+      sp.position.set(2, 2);
+      side.addChild(sp);
+    }
+    const bl = text(boss ? t(`in.${boss.id}.name`) : t(`stop.${st().kind}`), {
+      color: C.paper2,
+      wrap: face ? 70 : 110,
+      fit: face ? 70 : 110,
+    });
+    bl.position.set(face ? 45 : 5, 4);
+    side.addChild(bl);
     if (boss) {
       side.eventMode = 'static';
       side.on('pointertap', () =>
@@ -157,11 +169,16 @@ export function stopScene(game: Game): Scene {
     }
     s.pocket.forEach((code, i) => {
       const box = new Container();
-      box.position.set(130 + i * 65, 0);
-      box.addChild(panel(63, 22, code ? C.night3 : C.night1, code ? C.amber1 : C.night3));
+      box.position.set(i * 60, 46);
+      box.addChild(panel(58, 44, code ? C.night3 : C.night1, code ? C.amber1 : C.night3));
+      if (!code) {
+        const e = text(t('mech.pocket').toLowerCase(), { color: C.night5, shadow: false, fit: 54 });
+        e.position.set(4, 4);
+        box.addChild(e);
+      }
       if (code) {
         const def = coupon(code);
-        const l = text(t(`cp.${def.id}.name`).replace('Талон ', ''), { color: C.amber3, fit: 57 });
+        const l = text(t(`cp.${def.id}.name`).replace('Талон ', ''), { color: C.amber3, wrap: 54, fit: 54 });
         l.position.set(3, 3);
         box.addChild(l);
         box.eventMode = 'static';
@@ -175,7 +192,7 @@ export function stopScene(game: Game): Scene {
 
   // ---------- Score panel ----------
   const score = new Container();
-  score.position.set(0, 160);
+  score.position.set(0, 148);
   root.addChild(score);
   const handName = text('', { align: 'center', color: C.paper2, fit: 240 });
   handName.position.set(MID, 0);
@@ -207,7 +224,7 @@ export function stopScene(game: Game): Scene {
 
   // ---------- Gauge ----------
   const gauge = new Graphics();
-  gauge.position.set(W - 10, 160);
+  gauge.position.set(W - 10, 148);
   root.addChild(gauge);
   const gaugeH = Math.max(60, Math.min(170, H - 160 - 150));
   let shownGauge = s.gauge;
@@ -409,8 +426,8 @@ export function stopScene(game: Game): Scene {
     return v ? [core.x + v.x, core.y + v.y - CARD_H / 2 - 4] : [core.x + MID, core.y + 160];
   };
   const seatPos = (i: number): [number, number] => [
-    core.x + (i % 3) * 87 + 42,
-    core.y + 50 + Math.floor(i / 3) * 39,
+    core.x + (i % 3) * 46 + 22,
+    core.y + 50 + Math.floor(i / 3) * 46,
   ];
 
   async function run(events: GameEvent[]): Promise<void> {

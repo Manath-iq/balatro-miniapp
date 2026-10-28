@@ -6,6 +6,7 @@ import { coupon, passenger, punch } from '../../../engine/content/registry';
 import { C, RARITY_COLOR } from '../../gfx/palette';
 import { t } from '../../i18n';
 import type { Game, Scene } from '../app';
+import { portrait } from '../art';
 import { sfx } from '../feel';
 import { cardTexture, panel, rankLabel, text } from '../pixel';
 import { tips } from '../tutorial';
@@ -66,7 +67,7 @@ export function kioskScene(game: Game): Scene {
     // Салон: tap a passenger to read it or drop it off.
     label(t('mech.cabin').toUpperCase(), 0, 30);
     s.cabin.forEach((seat, i) => {
-      const tile = new SeatTile(seat?.code ?? null, 84, 28, () => {
+      const tile = new SeatTile(seat?.code ?? null, 42, 42, () => {
         if (!seat) return;
         const d = passenger(seat.code);
         const sh = infoSheet(
@@ -90,12 +91,12 @@ export function kioskScene(game: Game): Scene {
         sh.addChild(sell);
         showSheet(sh);
       });
-      tile.position.set((i % 3) * 87, 48 + Math.floor(i / 3) * 30);
+      tile.position.set(i * 43, 48);
       body.addChild(tile);
     });
 
     // Карман (coupons) and Копилка.
-    let y = 48 + Math.ceil(s.cabin.length / 3) * 30 + 4;
+    let y = 48 + 42 + 6;
     label(t('mech.pocket').toUpperCase(), 0, y);
     label(`${t('mech.piggy').toUpperCase()}: ${s.piggy}◉`, 132, y);
     y += 18;
@@ -148,14 +149,20 @@ export function kioskScene(game: Game): Scene {
         return;
       }
       const info = itemInfo(it);
-      const nx = it.k === 'card' ? 30 : 6;
+      const face = it.k === 'passenger' ? portrait(passenger(it.code).id) : undefined;
+      const nx = it.k === 'card' ? 30 : face ? 46 : 6;
       const textW = W - 76 - nx;
       const n = text(info.name, { color: info.color, fit: textW });
       n.position.set(nx, 3);
       const d = text(info.desc, { color: C.paper1, wrap: textW });
       d.position.set(nx, 21);
-      const h = Math.max(36, 25 + d.height);
+      const h = Math.max(face ? 46 : 36, 25 + d.height);
       row.addChild(panel(W, h, C.night2, info.color, C.night3));
+      if (face) {
+        const fp = new Sprite(face);
+        fp.position.set(3, Math.floor((h - 40) / 2));
+        row.addChild(fp);
+      }
       if (it.k === 'card') {
         const sp = new Sprite(cardTexture({ rank: it.rank, suit: it.suit, punch: it.punch, charge: 0 }));
         sp.scale.set(0.5);
@@ -296,14 +303,21 @@ export function rewardScene(game: Game): Scene {
     const d = passenger(code);
     const c = new Container();
     c.position.set(0, y);
-    const n = text(t(`p.${d.id}.name`), { color: RARITY_COLOR[d.rarity], fit: 178 });
-    n.position.set(8, 5);
-    const ds = text(t(`p.${d.id}.desc`), { color: C.paper1, wrap: 174 });
-    ds.position.set(8, 24);
-    const fl = text(t(`p.${d.id}.flavor`), { size: 8, color: C.night7, wrap: 174 });
-    fl.position.set(8, 28 + ds.height);
-    const h = 36 + ds.height + fl.height;
+    const face = portrait(d.id);
+    const tx = face ? 48 : 8;
+    const n = text(t(`p.${d.id}.name`), { color: RARITY_COLOR[d.rarity], fit: 178 - tx + 8 });
+    n.position.set(tx, 5);
+    const ds = text(t(`p.${d.id}.desc`), { color: C.paper1, wrap: 174 - tx + 8 });
+    ds.position.set(tx, 24);
+    const fl = text(t(`p.${d.id}.flavor`), { size: 8, color: C.night7, wrap: 174 - tx + 8 });
+    fl.position.set(tx, 28 + ds.height);
+    const h = Math.max(48, 36 + ds.height + fl.height);
     c.addChild(panel(258, h, C.night1, RARITY_COLOR[d.rarity], C.night3));
+    if (face) {
+      const fp = new Sprite(face);
+      fp.position.set(4, 4);
+      c.addChild(fp);
+    }
     const b = new Button(t('btn.take'), 70, 26, {
       fill: C.glass1,
       edge: C.go1,

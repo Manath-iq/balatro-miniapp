@@ -1,8 +1,9 @@
 // Pixel UI widgets: buttons, passenger tiles, toasts.
-import { Container, Graphics, Rectangle } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
 import { passenger } from '../../engine/content/registry';
 import { C, RARITY_COLOR } from '../gfx/palette';
 import { t } from '../i18n';
+import { PORTRAIT, portrait } from './art';
 import { haptic, sfx } from './feel';
 import { panel, text } from './pixel';
 
@@ -82,7 +83,7 @@ export class Button extends Container {
   }
 }
 
-/** A Салон seat: passenger name on a rarity-coloured tile. */
+/** A Салон seat: the passenger's portrait in a rarity-coloured frame (name and text open on tap). */
 export class SeatTile extends Container {
   readonly tw: number;
   readonly th: number;
@@ -92,26 +93,30 @@ export class SeatTile extends Container {
     this.th = h;
     if (code === null) {
       const g = new Graphics();
-      for (let x = 1; x < w - 1; x += 2)
-        g.rect(x, 0, 1, 1)
-          .rect(x, h - 1, 1, 1)
-          .fill(C.night4);
-      for (let y = 1; y < h - 1; y += 2)
-        g.rect(0, y, 1, 1)
-          .rect(w - 1, y, 1, 1)
-          .fill(C.night4);
-      const l = text(t('seat.empty'), { color: C.night5, align: 'center', shadow: false });
-      l.position.set(w / 2, h / 2 - 8);
-      this.addChild(g, l);
+      g.rect(1, 1, w - 2, h - 2).fill({ color: C.night1, alpha: 0.6 });
+      for (let x = 1; x < w - 1; x += 3)
+        g.rect(x, 0, 2, 1)
+          .rect(x, h - 1, 2, 1)
+          .fill(C.night5);
+      for (let y = 1; y < h - 1; y += 3)
+        g.rect(0, y, 1, 2)
+          .rect(w - 1, y, 1, 2)
+          .fill(C.night5);
+      this.addChild(g);
     } else {
       const def = passenger(code);
       const col = RARITY_COLOR[def.rarity];
-      this.addChild(panel(w, h, C.night3, col, C.night4));
-      const g = new Graphics().rect(2, 2, 3, h - 4).fill(col);
-      const name = text(t(`p.${def.id}.name`), { color: C.paper2, wrap: w - 9 });
-      if (name.height > h - 2) name.set(t(`p.${def.id}.name`).split(' ')[0]!);
-      name.position.set(7, Math.max(1, Math.floor((h - name.height) / 2)));
-      this.addChild(g, name);
+      this.addChild(panel(w, h, C.night1, col, C.night2));
+      const tex = portrait(def.id);
+      if (tex && w >= PORTRAIT && h >= PORTRAIT) {
+        const sp = new Sprite(tex);
+        sp.position.set(Math.floor((w - PORTRAIT) / 2), Math.floor((h - PORTRAIT) / 2));
+        this.addChild(sp);
+      } else {
+        const name = text(t(`p.${def.id}.name`), { color: C.paper2, wrap: w - 6, fit: w - 6 });
+        name.position.set(3, 2);
+        this.addChild(name);
+      }
     }
     if (onTap) {
       this.eventMode = 'static';
