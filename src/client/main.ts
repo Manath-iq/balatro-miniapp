@@ -8,8 +8,11 @@ const root = document.getElementById('app')!;
 const name = new URLSearchParams(location.search).get('sandbox');
 const load = name ? sandboxes[`./${name}/sandbox.ts`] : undefined;
 
+const params = new URLSearchParams(location.search);
 if (load) {
   void load().then((m) => m.run(root));
-} else {
+} else if (params.has('diag')) {
   void import('./diag');
+} else {
+  void import('./game/boot').then((m) => m.startGame(root));
 }

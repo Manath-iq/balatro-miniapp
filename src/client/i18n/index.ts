@@ -3,18 +3,20 @@
 import type { Lang } from '../platform/tg';
 import enContent from './en/content';
 import enCore from './en/core';
+import enGame from './en/game';
 import enPassengers from './en/passengers';
 import enUiDom from './en/ui-dom';
 import ruContent from './ru/content';
 import ruCore from './ru/core';
+import ruGame from './ru/game';
 import ruPassengers from './ru/passengers';
 import ruUiDom from './ru/ui-dom';
 
 export type Dict = Readonly<Record<string, string>>;
 
 const dicts: Record<Lang, Dict[]> = {
-  ru: [ruCore, ruPassengers, ruContent, ruUiDom],
-  en: [enCore, enPassengers, enContent, enUiDom],
+  ru: [ruCore, ruGame, ruPassengers, ruContent, ruUiDom],
+  en: [enCore, enGame, enPassengers, enContent, enUiDom],
 };
 
 let current: Lang = 'ru';

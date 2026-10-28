@@ -42,3 +42,9 @@ body {
 button {
   touch-action: manipulation;
 }
+
+@font-face {
+  font-family: "Tiny5";
+  src: url("/fonts/tiny5.woff2") format("woff2");
+  font-display: block;
+}
