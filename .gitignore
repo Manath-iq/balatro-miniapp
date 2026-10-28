@@ -10,3 +10,4 @@ dist/
 coverage/
 assets/raw/
 worker-configuration.d.ts
+.claude/worktrees/
