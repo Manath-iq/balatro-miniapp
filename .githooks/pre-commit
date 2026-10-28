@@ -1,0 +1,6 @@
+#!/bin/sh
+# Refuse commits that contain something shaped like a Telegram bot token.
+if git diff --cached -U0 | grep -E '^\+' | grep -qE '[0-9]{8,10}:[A-Za-z0-9_-]{35}'; then
+  echo "pre-commit: staged changes contain a Telegram bot token pattern. Use 'wrangler secret put BOT_TOKEN' instead." >&2
+  exit 1
+fi

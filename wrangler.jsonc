@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "last-tram",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-10-20",
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "last-tram-db",
+      "database_id": "142d2ad6-d0cb-480c-b6ae-faf701ffe6dd",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": { "ENGINE_VERSION": "1" },
+  "observability": { "enabled": true }
+}

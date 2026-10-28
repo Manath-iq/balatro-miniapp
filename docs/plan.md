@@ -1,0 +1,188 @@
+# План: «Последний трамвай» / Last Tram — покерный рогалик для Telegram Mini App
+
+## Context
+Пользователь хочет вертикальную игру «уровня топ» в Telegram Mini App: жанр покерного рогалика (как Балатро) с
+вайбом «пиксели + CRT + психоделический фон + сочные карты», глобальный лидерборд, бесплатный хостинг, ассеты из ChatGPT.
+Папка `/Users/manath/myAI/balatro-mini` пустая (greenfield). Делаем ОРИГИНАЛЬНУЮ игру жанра: свои названия, механики,
+арт, шейдер, раскладка. Нельзя: имя Balatro в пользовательских текстах и имени Worker, их шрифт m6x11, порты их шейдера,
+джокеры/блайнды/анте/таро/планеты, пара «синие фишки / красный мульт», их раскладка.
+
+**Решения пользователя:** сеттинг «Последний трамвай» (ночной неон-нуар; пассажиры = модификаторы, контролёры = боссы,
+жетоны = валюта, Мощность = Ток × Напряжение, Вт→кВт→МВт→ГВт); классическая колода 52 карты БЕЗ козыря; забег 15–20 мин
++ «Маршрут дня» (общий сид) + «Кольцевая» (бесконечный); RU+EN по `language_code` (по умолчанию RU); один Cloudflare
+Worker (статика + /api) + D1, запасной хост не нужен; ассеты через скилл `chatgpt-image` (Chrome пользователя с ChatGPT);
+код в публичный пустой репо https://github.com/Manath-iq/balatro-miniapp.git (gh залогинен, ssh).
+
+**Окружение:** node 25.5, python 3.12 (Pillow 12.2), wrangler глобально 4.14.4 (OAuth-логин, scope d1/workers) — в проект
+ставим wrangler 4.154. Бот: id 9078009106. Токен НИКОГДА не пишем в файлы/git/план: пользователь сам делает
+`npx wrangler secret put BOT_TOKEN` (лучше с перевыпущенным в BotFather токеном, т.к. старый был в чате).
+
+**Источники деталей** (отчёты исследования; в M0 переносим выжимки в `docs/`):
+`/private/tmp/claude-501/-Users-manath-myAI-balatro-mini/49883001-1a88-4980-8fc2-fea99dae9def/scratchpad/report-{design,style,telegram,hosting}.md`
+
+---
+
+## 1. Стек (решено)
+| Область | Решение |
+|---|---|
+| Сборка | Vite 8.3.5, один пакет, без фреймворка, target ES2022 (BigInt), `assetsInlineLimit: 0`, Pixi отдельным чанком |
+| Язык/линт | TypeScript **6.0.3 (pin)** strict + `noUncheckedIndexedAccess` + `erasableSyntaxOnly`; project refs engine/client/worker/node; Biome 2.6 |
+| Тесты | vitest **4.1.12 (pin)** projects: engine (node), worker (`@cloudflare/vitest-pool-workers` 0.23 + локальная D1), client; fast-check 4.10; `npm run test:jsc` — движок + golden-реплеи в системном macOS `jsc` против Node (сравнение hashState) |
+| Рендер | Гибрид: **один PixiJS 8.22 canvas** для splash/меню/карты/остановки/ларька/награды/итога; **DOM** для лидерборда/настроек/правил/титров; общий CSS-CRT поверх обоих. Арт-холст 270×H, целочисленный масштаб `s = clamp(min(floor(bw/270), floor(bhUsable/460)),1,6)` (дробный ≥2.67 только при s≤2); лица карт собираются в арт-разрешении → апскейл ×s nearest в атлас → LINEAR при повороте |
+| Фон | Свой GLSL «дождь по стеклу ночного трамвая»: fbm domain-warp + вертикальные струи, 5 полос через палитру-LUT 1×16, Bayer 4×4, рендер 1/6–1/3 разрешения, 15–30 fps; униформы реагируют на Мощность/Форсаж/пробой/линию/босса/ларёк |
+| CRT | LOW/AVERAGE: CSS-оверлей (сканлайны по арт-строкам, виньетка); HIGH: свой Pixi-фильтр (без бочки — тач не ремапим) + `AdvancedBloomFilter` (pixi-filters 6.1.5); слайдер CRT + тумблер bloom |
+| Шрифты | Tiny5 (HUD/цифры) + Pixeloid Sans (описания), OFL, кириллица; `scripts/fonts/bake_bmfont.py` (Pillow, `fontmode="1"`) → BMFont; woff2 для DOM |
+| Анимация/звук | Свои пружины, таймлайн, trauma-тряска, пул частиц (без GSAP); ZzFX 1.4 SFX с ростом высоты тона на каждом такте подсчёта; музыка в M6 |
+| Telegram | Официальный `telegram-web-app.js` + `@types/telegram-web-app` 10.1 за обёрткой `platform/tg.ts` (`isVersionAtLeast` + try/catch); eruda 3.4 по `?debug=1` |
+| Worker | Свой роутер (5 маршрутов), импортирует `src/engine`, только Web Crypto; wrangler 4.154 + `@cloudflare/vite-plugin` 1.65; Worker `last-tram`, D1 `last-tram-db`, `run_worker_first: ["/api/*"]`, SPA fallback, `observability` |
+| Скрипты | tsx 4.23 (симулятор баланса на worker_threads, бенчмарк, golden); арт-пайплайн в venv `.venv-art` (Pillow, numpy, opt. proper-pixel-art 2.0) |
+
+## 2. Структура и движок
+```
+package.json (name last-tram) · wrangler.jsonc · vite.config.ts · vitest.config.ts · tsconfig*.json · biome.json · .claude/launch.json
+index.html · public/{_headers,fonts/} · migrations/0001_init.sql · docs/{design.md,design-delta.md,engine-contract.md}
+assets/{palette.json (ЕДИНСТВЕННЫЙ источник палитры для TS и Python), raw/, processed/, fonts-src/}
+src/engine/   ЧИСТЫЙ: types events rng power hash log replay preview cards hands scoring gauge mastery wave cabin route stop kiosk economy run
+              content/{defs,balance,registry,testkit, passengers/{ranks,mastery,economy,wave,overdrive,growth,cabin}, coupons punches inspectors drivers conditions}
+src/shared/api.ts
+src/client/   main boot · platform/{tg,storage,haptics,quality,lifecycle,debug} · net/api · save/save · i18n/{index,format,ru/*,en/*}
+              gfx/{app,layout,palette,fonts,cardFaces,nineSlice,atlas,background/*,crt/*} · fx/{spring,timeline,shake,particles,popText}
+              director/{Director,beats} · input/gestures · audio/{sfx,presets,music,unlock} · views/* · scenes/{SceneManager,splash,menu,route,stop,kiosk,reward,result,pause}
+              dom/{dom.css,leaderboard,settings,rules,credits}
+worker/{index,router,auth,sign,db,cache}.ts · worker/routes/{start,submit,leaderboard,me}.ts
+tests/{engine,worker}/ · tests/fixtures/golden/ · scripts/{check-engine-purity,bench-replay,gen-golden,jsc-golden.sh} · scripts/sim/** · scripts/fonts/** · scripts/art/**
+```
+- **Границы:** engine не импортирует ничего вне себя (`lib: ES2022`, `types: []`) + `check-engine-purity.ts` валит сборку на
+  `Math.random/pow/sqrt/exp/log/sin/cos/…`, `**`, `Date`, `performance`, `Intl`, `toLocale*`, `toFixed`, `parseFloat`, `for…in`,
+  float-литералы, `.sort(` без компаратора. Worker → engine + shared. Тексты контента только в `client/i18n` (движок — id и числа).
+- **API движка (замораживается в M1):** `newRun(cfg)`, `step(s, action)` (мутирует, кидает IllegalAction, возвращает `GameEvent[]`),
+  `legal(s)`, `preview(s, idx)`, `replay(cfg, log)` (события выкл.), `encodeLog/decodeLog`, `hashState`, `powerKey(bigint)`,
+  `ENGINE_VERSION`, `CONTENT_HASH`. Типы: `Seed = 4×u32`, `Suit 0..3`, `Rank 2..14`, `HandType 0..10`, `Ratio=[num,den]`,
+  `Card{uid,rank,suit,punch,charge}`, `Phase route|stop|reward|kiosk|depot|over`, `Action` (route/play{idx,od}/discard/coupon/
+  buy/shift/sell/swap/workshop/scrap/piggy/piggyBreak/reward/leave/ring/end). Все мутации идут через `Fx`, который же эмитит
+  `GameEvent` с источником → анимация не может разойтись с логикой. Хуки контента: `PassengerDef` (rules/onStopStart/onCard/
+  onHeld/onHand/onAfterHand/onDiscard/onBlowout/onStopEnd/onKiosk/onCardRemoved), `InspectorDef`, `CouponDef`, `PunchDef`,
+  `DriverDef`, `ConditionDef`; scoring-хуки чистые, возвращают `Delta{t,n,x:Ratio,retrig,sparks}`.
+- **Порядок подсчёта:** правила (balance→водитель→условие→разряд→кресла 1→6→босс) → база руки по Стажу → карты слева направо
+  (Ток + пробивка + onCard кресел 1→6, с ретриггерами) → карты в руке → все аддитивные onHand (кресла, Волна, босс) → кап Н
+  → произведение всех ×Ratio → Форсаж `(100+G)/100` → floor.
+- **RNG:** sfc32 128 бит, потоки `stream(seed, TAG, a, b)` только на `Math.imul/>>>/^/+`, `int(n)` с отбраковкой. Теги ROUTE,
+  DECK (ключ сортировки на карту = `fmix32(state ^ uid)` → добавление/удаление карт не сдвигает остальные), SPARK, BOSS, SEAT,
+  KIOSK/WORKSHOP, REWARD, COUPON. Сиды: daily = HMAC(SEED_SECRET, "daily:"+дата МСК), обычный = HMAC(SEED_SECRET, runId),
+  оффлайн = getRandomValues (без рейтинга).
+- **Лог действий:** заголовок 8 байт (`LT`, версия формата, ENGINE_VERSION u16, CONTENT_HASH u32) + опкоды 1–3 байта
+  (play/discard — ниблы слотов в порядке подсчёта) → ~0.5–1 КБ на забег, base64url влезает в одно значение CloudStorage.
+  Лимиты: 64 КБ тела, 4000 действий.
+- **Числа:** Т и Н — safe int, множители — точные `Ratio`, Мощность/итоги — **BigInt** (одинаково в JSC и V8, без pow:
+  рост Кольцевой `t*17n/10n`). Клиент форматирует по строке цифр (Вт…ЭВт, 3 значащих, потом ×10ⁿ). В D1: `*_text` + `*_key`.
+
+## 3. Дизайн (база — report-design.md) и дельта под 52 карты без козыря
+- 52 карты; Ток карты = ранг: 2–10 номинал, В=11, Д=12, К=13, Т=14 (туз 14 и в колесе). Стандартный порядок рук, колесо A-2-3-4-5,
+  без перехода через край. Рука 7 карт, сыграть 1–5; на остановке 4 хода, 3 сброса. Пятерня — только через копии (Ксерокс).
+- **Таблица рук (все строки отличаются от Балатро):**
+
+| Рука | Т | Н | +Т/ур | +Н/ур |
+|---|---|---|---|---|
+| Старшая | 6 | 1 | 6 | 1 |
+| Пара | 9 | 1 | 8 | 1 |
+| Две пары | 14 | 2 | 10 | 1 |
+| Тройка | 16 | 3 | 12 | 1 |
+| Стрит | 26 | 3 | 14 | 2 |
+| Флеш | 30 | 3 | 16 | 2 |
+| Фулл-хаус | 38 | 4 | 18 | 2 |
+| Каре | 56 | 5 | 24 | 2 |
+| Стрит-флеш | 90 | 7 | 30 | 3 |
+| Пятерня* | 110 | 8 | 32 | 3 |
+| Молния* (роял-флеш) | 150 | 10 | 40 | 4 |
+  \* скрыты до первого розыгрыша. Стаж: XP-пороги 2/5/9/14/20/27/35, далее +9.
+- **Сигнатурные механики** (из дизайна): Форсаж (искры 3–7 за срабатывание, +2 за В/Д/К/Т, +3 Медь; включение при G≥30 даёт
+  ×(1+G/100); пробой при ≥100 = −1 ход; остывание ½ между остановками), Стаж (XP от розыгрышей), Салон 3×2 с соседством,
+  Зелёная волна (+1 Н за шаг, макс +4), маршрут 3 линии × 4 остановки с выбором ветки/Экспресса/финального босса, Ларёк-лента
+  со «сдвигом», Мастерская, Утиль, Копилка.
+- **Цели:** 200 / 300 / 460 / **1 100** (контролёр) / 1 050 / 1 600 / 2 400 / **6 000** / 5 600 / 8 500 / 13 000 / **35 000** (Депо);
+  Кольцевая ×1.7 за остановку (×2 с 21-й), каждая 3-я — контролёр ×1.6. Всё тюнится симулятором.
+- **Замены трамп-контента:** Картёжник→**Зебра** (≥3 очковые с чередованием цвета: ×Н 1.5); Гадалка (называет тип руки:
+  первый розыгрыш ×Н 2 и +2 XP); Шестёрка→**Мелочь** (2–5 дают тройной Ток); Перекрасчик (сброс ровно 2: вторая берёт масть
+  первой); Генерал (все очковые В–Т и ≥3: ×Н 2.5); Подкидной (старшая оставшаяся в руке добавляет свой Ток);
+  Аристократ (нет очковых ниже 10: +6 Н); Тысячник без козыря; Очкарик (сумма Тока ≤21: +8 Н); Каскадёр→**Экстремал**;
+  пробивка Хамелеон→**Конденсатор** (+3 Т за руку, пока лежит в руке, макс +15); талон Перекозырь→**Пересадочный**
+  (2 руки смена типа не рвёт Волну); босс Ревизор (карты без пробивки дают ½ Тока, пробитые +1 жетон, ≤3); Перекозырка→
+  **Ремонт путей** (ранг «в ремонте»: 0 Т, но +6 искр); Наизнанку (Ток = 16−ранг); водитель Гоша→**Гоша-ремонтник** (40 карт без
+  2–4, +1 сброс, цели ×1.1); условия дня: «Без двоек», «Узкая лента», «Опытный экипаж», «Высокое напряжение».
+- **Контент v1:** 24 пассажира (Зебра, Мелочь, Генерал, Аристократ, Тысячник, Отличник, Очкарик, Студент, Профессор, Близнецы,
+  Минималист, Дачник, Бабка с семечками, Сборщик бутылок, Светофорщик, Лестничник, Электрик, Дед с пробками, Энергетик,
+  Адреналинщик, Качок, Ветеран, Без остановок, Гармонист); 8 талонов (Медь, Неон, Утиль, Ксерокс, Пересадочный, Конспект,
+  Огнетушитель, Лишний билет); 4 пробивки (Медь, Неон, Компостер, Конденсатор); 6 контролёров (Ревизор, Кондукторша Люда,
+  Гололёд, Блэкаут, Пересменка, Ремонт путей) + 2 финала (Начальник депо, Последний трамвай); 2 водителя (Петя, Тётя Валя);
+  4 условия дня. Арт v1 ≈ 47 шт.: 24 портрета, 8 боссов, 12 картинок В/Д/К, 2 рубашки, лого.
+
+## 4. Экраны, раскладка, управление
+- Поток: Splash → Меню (новый забег / продолжить / Маршрут дня с таймером до 00:00 МСК) → Карта маршрута → Остановка → (касса
+  карточкой) → Награда 1-из-3 после контролёра → Ларёк → … → Депо → Итог (выработка, лучшая рука со снимком салона, ранг,
+  «Поделиться», «Ещё») → Кольцевая → Лидерборд (DOM: День / Кольцевая / Пиковая мощность). Пауза по BackButton.
+- **Экран остановки (арт-px, ширина 270, Hu=520; зона D гибкая):** A HUD 0–28 (остановка, цель, жетоны, прогресс) · B Салон 3×2
+  плитки 48×48 + боковая панель (босс, карман 2 талона) 32–132 · C табло «Т × Н» + имя руки/Стаж/Волна, справа трубка Форсажа
+  136–184 · D зона розыгрыша 5 карт 48×66, 188–356 · полоса колоды/сортировки/превью 360–376 · E рука 7 карт веером 376–472 ·
+  F кнопки [СБРОС] [⚡ФОРСАЖ] [ИГРАТЬ] 476–520 (32 арт-px ≈ 44 CSS px). Каскад подсчёта сходится в табло C, затем Мощность падает
+  в прогресс A. Тайминг 1×: 140 мс/карта, 220 мс/пассажир, 350 мс перед ×; скорость 1×/2×/4× + удержание для перемотки.
+- Ввод: тап — выбор (haptic light); перетаскивание вбок — порядок; свайп вверх — сыграть, вниз — сброс (кнопки всегда есть);
+  long-press 350 мс — карточка деталей; продажа/скип/выход — удержание 600 мс; десктоп: hover + клавиши 1–7/Enter/D/F.
+- Telegram: `ready()` после первого кадра, `requestFullscreen` (8.0, обработка `fullscreenFailed`), `lockOrientation` в портрете,
+  `disableVerticalSwipes` (7.7), safe/content-safe инсеты через CSS-переменные, `--tg-viewport-stable-height`, haptics на события,
+  `enableClosingConfirmation` в забеге, пауза на `deactivated`, сейв = сид + лог (DeviceStorage → localStorage, сводка в CloudStorage),
+  гость при пустом initData (оффлайн, без рейтинга). Только на домене из BotFather (origin hardening 10.2).
+
+## 5. Бэкенд
+- Каждый запрос: `Authorization: tma <initData>` → проверка HMAC (secret = HMAC("WebAppData", BOT_TOKEN)), `auth_date` ≤ 24 ч,
+  `timingSafeEqual`. `/api/run/start` (daily: одна засчитанная попытка в сутки через unique index; обычный: подписанный токен
+  без записи в D1), `/api/run/submit` (проверка подписи/версии/лимитов → **реплей движком** → upsert лучших в одном batch,
+  заявленный счёт только для сверки), `/api/leaderboard` (топ-50 + мой ранг с капом 1000, кэш в памяти 30–60 с), `/api/me`.
+- D1: `users`, `runs`, `best_daily`, `best_alltime` (по схеме из report-hosting.md, Мощность как text+key). Секреты: `SEED_SECRET`
+  генерим `openssl rand -hex 32 | npx wrangler secret put SEED_SECRET` (значение не касается диска), `BOT_TOKEN` вводит
+  пользователь. `.dev.vars` в `.gitignore` + pre-commit grep на шаблон токена. Rate-limit binding (проверить на Free).
+
+## 6. Вехи (каждая заканчивается проверяемым результатом)
+| M | Что делаем | Как проверяем |
+|---|---|---|
+| **M0** Каркас + деплой | git init → push в `Manath-iq/balatro-miniapp`; все зависимости сразу (агенты потом не трогают package.json); конфиги; заглушки всех модулей; `docs/` из отчётов; `.claude/launch.json` (vite dev 5173); `d1 create last-tram-db` + миграция local/remote; SEED_SECRET; `/api/health`, `/api/whoami`; страница диагностики (версия TG, платформа, инсеты, класс UA, язык, fullscreen/orientation/swipes). **Пользователь:** `npx wrangler secret put BOT_TOKEN`; BotFather → Configure Mini App URL = `https://last-tram.<sub>.workers.dev`, кнопка меню «Играть» | `npx wrangler --version`=4.154; `curl /api/health` 200; Browser pane 390×844; **на телефоне в Telegram**: fullscreen, инсеты, whoami возвращает tg id |
+| **M1** Движок | весь `src/engine` + минимальный контент (4 пассажира, 2 талона, 2 пробивки, 1 босс); лог, реплей, hashState; 20 golden-забегов ботами random/greedy; purity check; `docs/engine-contract.md`; **заморозка API** | оценщик рук против перебора всех C(52,5) + дубли; ручные тесты подсчёта; property-тесты (round-trip лога; replay == live hash на 1000 забегов); `test:jsc` совпадает с Node; бенч: 12 остановок warm < 1 мс, cold < 3 мс |
+| **M2** Играбельная остановка | Pixi, масштаб/раскладка, карты в коде, заглушки пассажиров, фон v1, CSS-CRT, bitmap-шрифты, пружины, режиссёр событий, жесты, HUD, каскад, ZzFX, haptics; песочница `?sandbox=stop&seed=…` | Browser pane 390×844 / 360×800 / 430×932 (`?tgmock=ios`), сыграть остановку, скриншоты, FPS ≥ 55; затем телефон |
+| **M3** Полный забег | карта, награда, ларёк (лента, сдвиг, мастерская, утиль, копилка), пересадка/высадка, талоны, интро боссов, Депо, Кольцевая, итог; сейв/резюм; RU/EN; весь контент v1; симулятор v1 + первый тюнинг | оффлайн от старта до Депо в браузере; перезагрузка посреди руки восстанавливает идентичное состояние; отчёт симулятора: planner-бот 25–35% побед, Σ Н на 12-й 20–40, ни один пассажир > 60% побед, 15–20 мин |
+| **M4** Бэкенд | маршруты, подписи, daily, реплей-верификация, upsert, ранг, кэш, rate limit, DEV_AUTH только в `.dev.vars`; клиентский API + DOM-лидерборд | pool-workers тесты (плохая подпись/протухание, подделанный лог → 422, повторный submit → 409, второй daily → 409); после деплоя CPU p99 < 5 мс на тяжёлых golden; на телефоне сыграть daily и увидеть себя в топе |
+| **M5** Арт | `palette.json`, стайл-библия (4 эталона), YAML-промпты; генерация через `chatgpt-image` листами 2×2 на #FF00FF (~16 px на арт-пиксель); `pipeline.py` (нарезка → восстановление сетки → палитра в OKLab → альфа → контур → чистка → валидация → атлас ≤ 2048²) | `validate.py` (только цвета палитры, точные размеры, альфа 0/255); контакт-листы на согласование пользователю; скриншоты с телефона |
+| **M6** Полировка/перф | тиры качества (класс UA, iOS=HIGH, FPS-проба с автопонижением), CRT/bloom на HIGH, восстановление WebGL-контекста, пауза, разблокировка аудио iOS, музыка, reduced motion, скорость, подсказки первого запуска | Chrome 6× CPU throttle + LOW UA; `WEBGL_lose_context`; ≥30 fps low-end, ≥55 mid; первая загрузка < 1.5 МБ gzip |
+| **M7** Релиз | BotFather (пользователь): иконка/цвета загрузки, `/newapp` short_name, описание, превью; шаринг результата через `savePreparedInlineMessage` + `shareMessage` с кнопкой `?startapp=daily&mode=fullscreen`; dev-окружение (`last-tram-dev` + dev-бот); тег v1.0 | iOS, Android, Desktop Telegram; шаринг; сутки наблюдения за лимитами D1/Worker |
+
+## 7. Как исполняем (ultracode → workflow на каждый этап)
+- M0 и заморозка API (M1-архитектура) — последовательно, сам. Дальше — workflows с агентами в отдельных git worktree, каждый
+  владеет только своими путями; контрактные файлы (`package.json`, `vite.config.ts`, `wrangler.jsonc`, `engine/{types,events}.ts`,
+  `content/{defs,registry}.ts`, `shared/api.ts`, `i18n/index.ts`, `SceneManager.ts`) меняю только я; реестры заранее заглушены.
+- Стадия 2 (параллельно): E-core (`src/engine/*.ts`, тесты, golden, jsc) · E-pass (`content/passengers/*` + i18n, тест на каждого) ·
+  E-misc (талоны/пробивки/контролёры/водители/условия) · Worker (`worker/**`, `migrations/**`, `tests/worker/**`) · Gfx (`gfx/**`,
+  `fx/**`, `scripts/fonts/**`) · Platform (`platform/**`, `audio/**`, `net/**`, `save/**`, `dom/**`) · Art-pipe (`scripts/art/**`).
+- Стадия 3: Scene-Stop (`director/**`, `input/**`, `views/**`, `scenes/stop/**`) · Scene-Shop (`scenes/{kiosk,reward}`) ·
+  Scene-Flow (`scenes/{splash,menu,route,result,pause}`) · Sim (`scripts/sim/**`, правит только `content/balance.ts`) ·
+  Art-gen (один агент — Chrome пользователя только один за раз).
+- После каждой стадии: мерж, CI (typecheck, Biome, vitest, purity, golden, jsc), адверсариальное ревью изменений, деплой, проверка в
+  Browser pane. Коммиты и push в репо пользователя по ходу вех. GitHub Actions — только тесты (без токена Cloudflare).
+
+## 8. Риски
+- **10 мс CPU на submit:** реплей без событий, таблицы на уровне модуля, бенч в M1 и M4. План B — подписанный чекпоинт на каждую
+  линию; план C — Workers Paid ($5).
+- **Расхождение JSC/V8:** только int/BigInt/Ratio, purity check, явные компараторы, golden в `jsc` перед каждым push,
+  `?debug=golden` на реальных телефонах; версия движка и хэш контента в каждом логе.
+- **Слабые Android / WebGL:** тиры + FPS-проба, фон 1/6 и 15 fps, cap DPR, один контекст, восстановление контекста, фолбэк на
+  статичный градиент.
+- **Telegram Desktop/Web:** всё за проверками версии, letterbox, мышь/клавиатура, localStorage вместо DeviceStorage.
+- **Смена движка во время daily:** `409 engine_outdated` → забег без рейтинга; не деплоить правила 21:00–03:00 МСК.
+- **Консистентность AI-арта:** фикс-палитра, стайл-библия в каждом запросе, листы 2×2, рамки/текст в коде, валидация;
+  при лимитах ChatGPT/CAPTCHA — стоп и вопрос пользователю.
+- **Публичный репо:** секреты только через `wrangler secret put`, `.gitignore` + pre-commit grep, «Balatro» нигде в
+  пользовательских текстах.
+
+## 9. Что нужно от пользователя по ходу
+1. M0: (опц.) перевыпустить токен в BotFather → `npx wrangler secret put BOT_TOKEN`; вписать URL Mini App и кнопку меню в BotFather;
+   открыть игру на телефоне и подтвердить диагностику.
+2. Разрешения на установки npm/pip и скачивание шрифтов (Tiny5 с GitHub google/fonts, Pixeloid с itch.io).
+3. M5: подключённое расширение Claude in Chrome + залогиненный ChatGPT; согласование стайл-библии и контакт-листов.
+4. Тесты на телефоне в конце M2, M4, M6, M7.

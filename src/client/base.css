@@ -1,0 +1,44 @@
+:root {
+  --bg: #0e0c1e;
+  --panel: #221f44;
+  --edge: #433d7a;
+  --text: #fff9ea;
+  --dim: #a49fd0;
+  --amber: #ffb347;
+  --volt: #b67cff;
+  --go: #5fe08a;
+  --blow: #ff4d3d;
+  --app-h: var(--tg-viewport-stable-height, 100dvh);
+  --inset-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+  --inset-bottom: calc(var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px));
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  height: var(--app-h);
+  touch-action: none;
+}
+
+button {
+  touch-action: manipulation;
+}

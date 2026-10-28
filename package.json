@@ -1,0 +1,43 @@
+{
+  "name": "last-tram",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Последний трамвай — покерный рогалик для Telegram Mini App",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "npm run build && vite preview",
+    "deploy": "npm run build && wrangler deploy",
+    "typecheck": "tsc -p tsconfig.engine.json && tsc -p tsconfig.client.json && tsc -p tsconfig.worker.json && tsc -p tsconfig.node.json",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "check:engine": "tsx scripts/check-engine-purity.ts",
+    "cf-typegen": "wrangler types",
+    "db:migrate:local": "wrangler d1 migrations apply last-tram-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply last-tram-db --remote"
+  },
+  "dependencies": {
+    "eruda": "3.4.3",
+    "pixi-filters": "6.1.5",
+    "pixi.js": "8.22.0",
+    "zzfx": "1.4.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@cloudflare/vite-plugin": "1.65.0",
+    "@cloudflare/vitest-plugin": "1.4.9",
+    "@types/node": "26.6.5",
+    "@types/telegram-web-app": "10.1.0",
+    "fast-check": "4.10.2",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "4.1.12",
+    "wrangler": "4.154.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

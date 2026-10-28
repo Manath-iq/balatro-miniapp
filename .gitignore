@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars*
+.env*
+!.env.example
+.venv-art/
+*.log
+.DS_Store
+coverage/
+assets/raw/
+worker-configuration.d.ts
