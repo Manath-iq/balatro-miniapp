@@ -16,6 +16,6 @@
       "migrations_dir": "migrations"
     }
   ],
-  "vars": { "ENGINE_VERSION": "1" },
+  "vars": { "ENGINE_VERSION": "1", "BOT_USERNAME": "balatro_minibot" },
   "observability": { "enabled": true }
 }

@@ -17,6 +17,10 @@ export async function startGame(root: HTMLElement): Promise<Game> {
     result: resultScene,
     top: topScene,
   });
+  if (new URLSearchParams(location.search).get('screen') === 'top') {
+    game.backTo = 'menu';
+    game.show('top');
+  }
   if (import.meta.env.DEV) (window as unknown as { __game: Game }).__game = game;
   return game;
 }

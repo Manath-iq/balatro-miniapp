@@ -1,6 +1,7 @@
 import { ENGINE_VERSION } from '../src/engine';
 import { AuthError, initDataFromRequest, validateInitData } from './auth';
 import { leaderboard, me } from './board';
+import { telegramWebhook } from './bot';
 import { fail, HttpError, json } from './http';
 import { startRun, submitRun } from './runs';
 
@@ -43,6 +44,8 @@ export default {
           return await submitRun(req, env);
         case 'GET /api/leaderboard':
           return await leaderboard(req, env);
+        case 'POST /api/tg/webhook':
+          return await telegramWebhook(req, env);
         case 'GET /api/me':
           return await me(req, env);
         default:
