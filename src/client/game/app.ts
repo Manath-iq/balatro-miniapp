@@ -200,7 +200,7 @@ export class Game {
   /** Common screen-space helpers. */
   get core(): { x: number; y: number; w: number; h: number } {
     const s = this.screen;
-    return { x: s.x0, y: s.top + 4, w: 270, h: s.h - s.top - s.bottom - 8 };
+    return { x: s.x0, y: s.top + 6, w: 258, h: s.h - s.top - s.bottom - 12 };
   }
 }
 

@@ -52,7 +52,8 @@ export function stopScene(game: Game): Scene {
   const root = new Container();
   const core = game.core;
   root.position.set(core.x, core.y);
-  const W = 270;
+  const W = 258;
+  const MID = 119; // centre of the play column (the gauge sits on the right)
   const H = core.h;
   const st = () => s.stop!;
   const boss = st().boss ? inspector(st().boss) : null;
@@ -95,7 +96,7 @@ export function stopScene(game: Game): Scene {
 
   // ---------- Cabin + side panel ----------
   const cabin = new Container();
-  cabin.position.set(0, 48);
+  cabin.position.set(0, 50);
   root.addChild(cabin);
   const sheetLayer = new Container();
   let sheet: Container | null = null;
@@ -106,7 +107,7 @@ export function stopScene(game: Game): Scene {
   const openSheet = (c: Container) => {
     closeSheet();
     sheet = c;
-    c.position.set(4, 154);
+    c.position.set(0, 160);
     c.eventMode = 'static';
     c.on('pointertap', closeSheet);
     sheetLayer.addChild(c);
@@ -118,23 +119,23 @@ export function stopScene(game: Game): Scene {
     });
     seatTiles.length = 0;
     s.cabin.forEach((seat, i) => {
-      const tile = new SeatTile(seat?.code ?? null, 88, 38, () => {
+      const tile = new SeatTile(seat?.code ?? null, 84, 36, () => {
         if (!seat) return;
         const def = passenger(seat.code);
         sfx('tap');
         openSheet(
-          infoSheet(262, t(`p.${def.id}.name`), t(`p.${def.id}.desc`), C.volt2, t(`p.${def.id}.flavor`)),
+          infoSheet(W, t(`p.${def.id}.name`), t(`p.${def.id}.desc`), C.volt2, t(`p.${def.id}.flavor`)),
         );
       });
-      tile.position.set((i % 3) * 91, Math.floor(i / 3) * 40);
+      tile.position.set((i % 3) * 87, Math.floor(i / 3) * 39);
       cabin.addChild(tile);
       seatTiles[i] = tile;
     });
     // boss / stop card
     const side = new Container();
-    side.position.set(0, 80);
-    const bossBox = panel(130, 22, boss ? C.blow0 : C.night2, boss ? C.blow1 : C.night4);
-    const bl = text(boss ? t(`in.${boss.id}.name`) : t(`stop.${st().kind}`), { color: C.paper2, fit: 122 });
+    side.position.set(0, 78);
+    const bossBox = panel(126, 22, boss ? C.blow0 : C.night2, boss ? C.blow1 : C.night4);
+    const bl = text(boss ? t(`in.${boss.id}.name`) : t(`stop.${st().kind}`), { color: C.paper2, fit: 118 });
     bl.position.set(4, 3);
     side.addChild(bossBox, bl);
     if (boss) {
@@ -142,7 +143,7 @@ export function stopScene(game: Game): Scene {
       side.on('pointertap', () =>
         openSheet(
           infoSheet(
-            262,
+            258,
             t(`in.${boss.id}.name`),
             t(`in.${boss.id}.desc`),
             C.blow1,
@@ -153,11 +154,11 @@ export function stopScene(game: Game): Scene {
     }
     s.pocket.forEach((code, i) => {
       const box = new Container();
-      box.position.set(134 + i * 68, 0);
-      box.addChild(panel(66, 22, code ? C.night3 : C.night1, code ? C.amber1 : C.night3));
+      box.position.set(130 + i * 65, 0);
+      box.addChild(panel(63, 22, code ? C.night3 : C.night1, code ? C.amber1 : C.night3));
       if (code) {
         const def = coupon(code);
-        const l = text(t(`cp.${def.id}.name`).replace('Талон ', ''), { color: C.amber3, fit: 60 });
+        const l = text(t(`cp.${def.id}.name`).replace('Талон ', ''), { color: C.amber3, fit: 57 });
         l.position.set(3, 3);
         box.addChild(l);
         box.eventMode = 'static';
@@ -171,22 +172,22 @@ export function stopScene(game: Game): Scene {
 
   // ---------- Score panel ----------
   const score = new Container();
-  score.position.set(0, 154);
+  score.position.set(0, 160);
   root.addChild(score);
   const handName = text('', { align: 'center', color: C.paper2, fit: 240 });
-  handName.position.set(125, 0);
-  const tBox = panel(100, 28, C.amber0, C.amber2, C.amber1);
-  tBox.position.set(4, 20);
-  const nBox = panel(100, 28, C.volt0, C.volt2, C.volt1);
-  nBox.position.set(146, 20);
+  handName.position.set(MID, 0);
+  const tBox = panel(96, 28, C.amber0, C.amber2, C.amber1);
+  tBox.position.set(MID - 116, 20);
+  const nBox = panel(96, 28, C.volt0, C.volt2, C.volt1);
+  nBox.position.set(MID + 20, 20);
   const tVal = text('0', { size: 24, align: 'center', color: C.amber3 });
-  tVal.position.set(54, 22);
+  tVal.position.set(MID - 68, 22);
   const nVal = text('0', { size: 24, align: 'center', color: C.volt3 });
-  nVal.position.set(196, 22);
+  nVal.position.set(MID + 68, 22);
   const times = text('×', { size: 24, align: 'center', color: C.paper2 });
-  times.position.set(125, 22);
+  times.position.set(MID, 22);
   const powerLbl = text('', { size: 24, align: 'center', color: C.paper2 });
-  powerLbl.position.set(125, 52);
+  powerLbl.position.set(MID, 52);
   score.addChild(handName, tBox, nBox, tVal, nVal, times, powerLbl);
   const tSpring = new Spring(1, 400, 0.35);
   const nSpring = new Spring(1, 400, 0.35);
@@ -203,9 +204,9 @@ export function stopScene(game: Game): Scene {
 
   // ---------- Gauge ----------
   const gauge = new Graphics();
-  gauge.position.set(258, 154);
+  gauge.position.set(W - 10, 160);
   root.addChild(gauge);
-  const gaugeH = Math.max(80, Math.min(180, H - 154 - 160));
+  const gaugeH = Math.max(60, Math.min(170, H - 160 - 150));
   let shownGauge = s.gauge;
   const drawGauge = () => {
     const g = gauge.clear();
@@ -220,8 +221,10 @@ export function stopScene(game: Game): Scene {
   };
 
   // ---------- Hand, play area, controls ----------
-  const handY = H - 36 - CARD_H / 2 - 8;
-  const playY = Math.round((230 + handY - CARD_H / 2 - 26) / 2);
+  const by = H - 32;
+  const handY = by - 18 - CARD_H / 2;
+  const deckY = handY - CARD_H / 2 - 30;
+  const playY = Math.round((240 + deckY) / 2);
   const cardsLayer = new Container();
   root.addChild(cardsLayer);
   const views = new Map<number, CardView>();
@@ -239,13 +242,13 @@ export function stopScene(game: Game): Scene {
   const layoutHand = () => {
     const order = displayOrder();
     const n = order.length;
-    const span = Math.min(36, n > 1 ? 222 / (n - 1) : 0);
+    const span = Math.min(35, n > 1 ? (W - CARD_W) / (n - 1) : 0);
     order.forEach((uid, i) => {
       const v = views.get(uid);
       if (!v) return;
       const mid = (n - 1) / 2;
-      v.sx.target = 125 + (i - mid) * span;
-      v.sy.target = handY + Math.round((i - mid) ** 2 * 1.1) - (v.selected ? 14 : 0);
+      v.sx.target = W / 2 + (i - mid) * span;
+      v.sy.target = handY + Math.round((i - mid) ** 2 * 0.6) - (v.selected ? 14 : 0);
       v.rot.target = (i - mid) * 0.035;
       cardsLayer.setChildIndex(v, Math.min(i, cardsLayer.children.length - 1));
     });
@@ -257,7 +260,7 @@ export function stopScene(game: Game): Scene {
       .map((uid) => hand.indexOf(uid));
   };
   const addView = (uid: number, fromDeck: boolean) => {
-    const v = new CardView(card(uid), fromDeck ? 236 : 125, fromDeck ? handY + 40 : handY);
+    const v = new CardView(card(uid), fromDeck ? W - 20 : W / 2, fromDeck ? handY + 40 : handY);
     v.on('pointertap', () => toggle(v));
     views.set(uid, v);
     cardsLayer.addChild(v);
@@ -279,19 +282,18 @@ export function stopScene(game: Game): Scene {
   };
 
   const info = text('', { color: C.night7 });
-  info.position.set(64, handY - CARD_H / 2 - 30);
+  info.position.set(66, deckY + 3);
   const previewLbl = text('', { align: 'right', color: C.paper1 });
-  previewLbl.position.set(250, handY - CARD_H / 2 - 24);
+  previewLbl.position.set(W, deckY);
   previewLbl.visible = false;
   root.addChild(info, previewLbl, sheetLayer);
 
-  const by = H - 32;
-  const discardBtn = new Button('', 74, 32, { fill: C.night3, edge: C.blow1, onTap: () => doDiscard() });
+  const discardBtn = new Button('', 72, 32, { fill: C.night3, edge: C.blow1, onTap: () => doDiscard() });
   discardBtn.position.set(0, by);
-  const odBtn = new Button('', 92, 32, { fill: C.volt0, edge: C.volt2, onTap: () => toggleOd() });
-  odBtn.position.set(78, by);
-  const playBtn = new Button('', 96, 32, { fill: C.glass1, edge: C.go1, onTap: () => doPlay() });
-  playBtn.position.set(174, by);
+  const odBtn = new Button('', 88, 32, { fill: C.volt0, edge: C.volt2, onTap: () => toggleOd() });
+  odBtn.position.set(76, by);
+  const playBtn = new Button('', 90, 32, { fill: C.glass1, edge: C.go1, onTap: () => doPlay() });
+  playBtn.position.set(168, by);
   const sortBtn = new Button(t('btn.sort'), 56, 22, {
     fill: C.night2,
     edge: C.night5,
@@ -300,7 +302,7 @@ export function stopScene(game: Game): Scene {
       layoutHand();
     },
   });
-  sortBtn.position.set(4, handY - CARD_H / 2 - 32);
+  sortBtn.position.set(0, deckY);
   root.addChild(discardBtn, odBtn, playBtn, sortBtn);
 
   const refreshControls = () => {
@@ -349,7 +351,7 @@ export function stopScene(game: Game): Scene {
     const code = s.pocket[slot];
     if (!code) return;
     const def = coupon(code);
-    const sheetC = infoSheet(262, t(`cp.${def.id}.name`), t(`cp.${def.id}.desc`), C.amber2);
+    const sheetC = infoSheet(W, t(`cp.${def.id}.name`), t(`cp.${def.id}.desc`), C.amber2);
     const L = game.legal();
     const use = new Button(t('btn.use'), 100, 20, {
       fill: C.amber0,
@@ -360,13 +362,13 @@ export function stopScene(game: Game): Scene {
         try {
           if (def.target.k === 'cards') {
             if (uids.length < def.target.min || uids.length > def.target.max) {
-              game.pops.pop(t('stop.pickCards'), core.x + 125, core.y + 170, C.amber2);
+              game.pops.pop(t('stop.pickCards'), core.x + MID, core.y + 170, C.amber2);
               return;
             }
             void run(game.act({ t: 'coupon', slot, uids }));
           } else if (def.target.k === 'hand') {
             if (!idx.length) {
-              game.pops.pop(t('stop.pickCards'), core.x + 125, core.y + 170, C.amber2);
+              game.pops.pop(t('stop.pickCards'), core.x + MID, core.y + 170, C.amber2);
               return;
             }
             void run(game.act({ t: 'coupon', slot, hand: preview(s, idx).type }));
@@ -378,7 +380,7 @@ export function stopScene(game: Game): Scene {
       },
     });
     use.setEnabled(!!L?.coupon[slot]);
-    use.position.set(154, 4);
+    use.position.set(W - 108, 4);
     sheetC.addChild(use);
     openSheet(sheetC);
   };
@@ -401,11 +403,11 @@ export function stopScene(game: Game): Scene {
   // ---------- Event cascade ----------
   const centerOf = (uid: number): [number, number] => {
     const v = views.get(uid);
-    return v ? [core.x + v.x, core.y + v.y - CARD_H / 2 - 4] : [core.x + 125, core.y + 160];
+    return v ? [core.x + v.x, core.y + v.y - CARD_H / 2 - 4] : [core.x + MID, core.y + 160];
   };
   const seatPos = (i: number): [number, number] => [
-    core.x + (i % 3) * 91 + 44,
-    core.y + 48 + Math.floor(i / 3) * 40,
+    core.x + (i % 3) * 87 + 42,
+    core.y + 50 + Math.floor(i / 3) * 39,
   ];
 
   async function run(events: GameEvent[]): Promise<void> {
@@ -423,7 +425,7 @@ export function stopScene(game: Game): Scene {
             const v = views.get(uid);
             if (!v) return;
             v.selected = false;
-            v.sx.target = 125 + (i - (n - 1) / 2) * 44;
+            v.sx.target = MID + (i - (n - 1) / 2) * 44;
             v.sy.target = playY - (e.scoring.includes(i) ? 6 : 0);
             v.rot.target = 0;
             cardsLayer.addChild(v);
@@ -459,7 +461,7 @@ export function stopScene(game: Game): Scene {
         case 'mod': {
           tAcc += e.t ?? 0;
           nAcc += e.n ?? 0;
-          let [x, y] = e.uid ? centerOf(e.uid) : [core.x + 125, core.y + 180];
+          let [x, y] = e.uid ? centerOf(e.uid) : [core.x + MID, core.y + 180];
           if (e.src.k === 'seat') {
             [x, y] = seatPos(e.src.i);
             const tile = seatTiles[e.src.i];
@@ -492,7 +494,7 @@ export function stopScene(game: Game): Scene {
           break;
         }
         case 'wave':
-          game.pops.pop(t('stop.wave', { n: e.step }), core.x + 125, core.y + 148, C.go1);
+          game.pops.pop(t('stop.wave', { n: e.step }), core.x + MID, core.y + 140, C.go1);
           sfx('levelUp', e.step);
           await wait(200);
           break;
@@ -502,7 +504,7 @@ export function stopScene(game: Game): Scene {
           await wait(150);
           break;
         case 'overdrive':
-          game.pops.pop(`⚡ ×${(e.x[0] / e.x[1]).toFixed(2)}`, core.x + 125, core.y + 200, C.volt3, 16);
+          game.pops.pop(`⚡ ×${(e.x[0] / e.x[1]).toFixed(2)}`, core.x + MID, core.y + 200, C.volt3, 16);
           sfx('overdrive');
           haptic.impact('heavy');
           game.shake.add(0.3);
@@ -518,7 +520,7 @@ export function stopScene(game: Game): Scene {
           game.shake.add(Math.min(0.9, 0.2 + ratio));
           game.bg.pulse(C.amber2, Math.min(1, 0.3 + ratio));
           game.bg.energy = Math.min(1, 0.2 + ratio);
-          game.particles.burst(core.x + 125, core.y + 200, Math.min(60, 10 + Math.round(ratio * 40)), [
+          game.particles.burst(core.x + MID, core.y + 200, Math.min(60, 10 + Math.round(ratio * 40)), [
             C.amber2,
             C.volt2,
             C.paper2,
@@ -549,15 +551,15 @@ export function stopScene(game: Game): Scene {
           break;
         case 'blowout':
           if (e.cancelledBy) {
-            game.pops.pop('⚡!', core.x + 263, core.y + 150, C.go1);
+            game.pops.pop('⚡!', core.x + W - 5, core.y + 150, C.go1);
             sfx('coin');
           } else {
-            game.pops.pop(t('stop.blowout'), core.x + 125, core.y + 160, C.blow1, 16);
+            game.pops.pop(t('stop.blowout'), core.x + MID, core.y + 160, C.blow1, 16);
             sfx('blowout');
             haptic.notify('error');
             game.shake.add(0.8);
             game.bg.pulse(C.blow1, 1);
-            game.particles.burst(core.x + 263, core.y + 170, 40, [C.blow1, C.amber2, C.paper2], 90);
+            game.particles.burst(core.x + W - 5, core.y + 170, 40, [C.blow1, C.amber2, C.paper2], 90);
           }
           shownGauge = e.gauge;
           drawGauge();
@@ -567,7 +569,7 @@ export function stopScene(game: Game): Scene {
           if (e.levelUp) {
             game.pops.pop(
               t('stop.levelUp', { hand: t(`hand.${e.hand}`), lvl: e.level }),
-              core.x + 125,
+              core.x + MID,
               core.y + 76,
               C.glass3,
             );
@@ -626,16 +628,16 @@ export function stopScene(game: Game): Scene {
           sfx('win');
           haptic.notify('success');
           const inc = e.income.reduce((a, b) => a + b.tokens, 0);
-          game.pops.pop(t('stop.cleared'), core.x + 125, core.y + 150, C.go1, 16);
-          game.pops.pop(t('stop.income', { n: inc }), core.x + 125, core.y + 172, C.amber3);
-          game.particles.burst(core.x + 125, core.y + 150, 60, [C.go1, C.amber2, C.paper2], 100);
+          game.pops.pop(t('stop.cleared'), core.x + MID, core.y + 150, C.go1, 16);
+          game.pops.pop(t('stop.income', { n: inc }), core.x + MID, core.y + 172, C.amber3);
+          game.particles.burst(core.x + MID, core.y + 150, 60, [C.go1, C.amber2, C.paper2], 100);
           await wait(900);
           break;
         }
         case 'stopFailed':
           sfx('lose');
           haptic.notify('error');
-          game.pops.pop(t('stop.failed'), core.x + 125, core.y + 150, C.blow1, 16);
+          game.pops.pop(t('stop.failed'), core.x + MID, core.y + 150, C.blow1, 16);
           game.bg.setMood('over');
           await wait(1200);
           break;
@@ -674,7 +676,7 @@ export function stopScene(game: Game): Scene {
   refreshControls();
   if (boss) {
     sfx('bell');
-    game.pops.pop(`«${t(`in.${boss.id}.quote`)}»`, core.x + 125, core.y + 160, C.blow1);
+    game.pops.pop(`«${t(`in.${boss.id}.quote`)}»`, core.x + MID, core.y + 160, C.blow1);
   }
 
   let time = 0;

@@ -40,20 +40,20 @@ export function menuScene(game: Game): Scene {
     [...word].forEach((ch, i) => {
       const c = text(ch, { size: 16, color: row === 0 ? C.amber2 : C.volt2, align: 'center' });
       c.scale.set(2);
-      c.position.set(135 - w / 2 + i * 24 + 12, 30 + row * 40);
+      c.position.set(129 - w / 2 + i * 24 + 12, 30 + row * 40);
       title.addChild(c);
       letters.push({ c, phase: i * 0.5 + row, y: 30 + row * 40 });
     });
   });
   const sub = text(t('menu.subtitle'), { align: 'center', color: C.glass3 });
-  sub.position.set(135, 108);
+  sub.position.set(129, 116);
   root.addChild(title, sub);
 
   const btns = new Container();
   root.addChild(btns);
   let y = Math.max(130, core.h / 2 - 40);
   const add = (b: Button) => {
-    b.position.set(135 - b.bw / 2, y);
+    b.position.set(129 - b.bw / 2, y);
     btns.addChild(b);
     y += b.bh + 8;
     return b;
@@ -117,7 +117,7 @@ export function menuScene(game: Game): Scene {
         align: 'center',
         color: C.night7,
       });
-      b.position.set(135, y + 6);
+      b.position.set(129, y + 6);
       btns.addChild(b);
     }
   };
@@ -128,7 +128,7 @@ export function menuScene(game: Game): Scene {
     });
     y = Math.max(130, core.h / 2 - 60);
     const h = text(t('menu.driver'), { align: 'center', color: C.paper2 });
-    h.position.set(135, y);
+    h.position.set(129, y);
     btns.addChild(h);
     y += 18;
     for (const [code, id] of [
@@ -150,8 +150,8 @@ export function menuScene(game: Game): Scene {
             }),
         }),
       );
-      const d = text(t(`dr.${id}.desc`), { align: 'center', color: C.night7, wrap: 240 });
-      d.position.set(135, y - 4);
+      const d = text(t(`dr.${id}.desc`), { align: 'center', color: C.night7, wrap: 236 });
+      d.position.set(129, y - 4);
       btns.addChild(d);
       y += d.height + 6;
     }

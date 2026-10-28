@@ -28,7 +28,7 @@ export function routeScene(game: Game): Scene {
       color: C.amber2,
     },
   );
-  head.position.set(135, 6);
+  head.position.set(129, 6);
   root.addChild(head);
 
   // Route strip: 12 stops, bosses marked.
@@ -46,7 +46,7 @@ export function routeScene(game: Game): Scene {
   root.addChild(strip);
 
   const tokens = text(`◉ ${s.tokens}`, { align: 'right', color: C.amber3 });
-  tokens.position.set(264, 42);
+  tokens.position.set(252, 42);
   const title = text(t('route.title'), { color: C.paper2 });
   title.position.set(6, 42);
   root.addChild(tokens, title);
@@ -74,13 +74,13 @@ export function routeScene(game: Game): Scene {
     const nl = text(name, { color: o.kind === 'branch' ? (i === 0 ? C.blow1 : C.glass3) : edge, fit: 150 });
     nl.position.set(8, 6);
     const tl = text(formatPower(o.target), { align: 'right', color: C.amber3 });
-    tl.position.set(262, 6);
+    tl.position.set(250, 6);
     content.addChild(nl, tl);
     let ly = 26;
     if (o.kind === 'express' || o.kind === 'normal') {
       const inf = text(t(o.kind === 'express' ? 'route.expressInfo' : 'route.normalInfo'), {
         color: C.night7,
-        wrap: 254,
+        wrap: 242,
       });
       inf.position.set(8, ly);
       content.addChild(inf);
@@ -88,16 +88,16 @@ export function routeScene(game: Game): Scene {
     }
     if (boss) {
       const pre = o.kind === 'branch' ? `${t('route.bossAhead')} ` : '';
-      const bl = text(`${pre}${t(`in.${boss.id}.name`)}`, { color: C.blow1, wrap: 254 });
+      const bl = text(`${pre}${t(`in.${boss.id}.name`)}`, { color: C.blow1, wrap: 242 });
       bl.position.set(8, ly);
       ly += bl.height + 2;
-      const bd = text(t(`in.${boss.id}.desc`), { color: C.paper1, wrap: 254 });
+      const bd = text(t(`in.${boss.id}.desc`), { color: C.paper1, wrap: 242 });
       bd.position.set(8, ly);
       ly += bd.height + 4;
       content.addChild(bl, bd);
     }
     const h = ly + 30;
-    card.addChild(panel(270, h, C.night1, edge, C.night3), content);
+    card.addChild(panel(258, h, C.night1, edge, C.night3), content);
     const go = new Button(t('btn.go'), 110, 24, {
       fill: C.glass1,
       edge: C.go1,
@@ -107,7 +107,7 @@ export function routeScene(game: Game): Scene {
         game.sync();
       },
     });
-    go.position.set(152, h - 28);
+    go.position.set(140, h - 28);
     card.addChild(go);
     root.addChild(card);
     y += h + 6;
@@ -117,8 +117,8 @@ export function routeScene(game: Game): Scene {
   const cab = new Container();
   cab.position.set(0, Math.min(core.h - 108, y + 4));
   s.cabin.forEach((seat, i) => {
-    const tile = new SeatTile(seat?.code ?? null, 88, 38);
-    tile.position.set((i % 3) * 91, Math.floor(i / 3) * 40);
+    const tile = new SeatTile(seat?.code ?? null, 84, 38);
+    tile.position.set((i % 3) * 87, Math.floor(i / 3) * 40);
     cab.addChild(tile);
   });
   root.addChild(cab);

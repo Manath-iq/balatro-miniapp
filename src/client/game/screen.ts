@@ -2,6 +2,8 @@
 import { insets } from '../platform/tg';
 
 export const CORE_W = 270;
+/** Width of the content column; CORE_W - CONTENT_W leaves at least 6 px gutters. */
+export const CONTENT_W = 258;
 const MIN_H = 470;
 
 export interface Screen {
@@ -37,7 +39,7 @@ export function measure(root: HTMLElement): Screen {
     scale,
     top: Math.ceil((ins.top * dpr) / scale),
     bottom: Math.ceil((ins.bottom * dpr) / scale),
-    x0: Math.floor((w - CORE_W) / 2),
+    x0: Math.floor((w - CONTENT_W) / 2),
     cssW: (w * scale) / dpr,
     cssH: (h * scale) / dpr,
   };
