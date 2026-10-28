@@ -1,5 +1,5 @@
 // Code-drawn pixel art: suits, cards, panels and pixel text (Tiny5).
-import { Container, Graphics, Text, Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Card } from '../../engine';
 import { C, CSS, SUIT_CSS } from '../gfx/palette';
 import { getLang } from '../i18n';
@@ -173,58 +173,76 @@ export interface TextOpts {
   wrap?: number;
 }
 
-/** Pixel text with a 1-px dark drop shadow. Anchor follows align. */
-export function text(str: string, o: TextOpts = {}): Container & { set(s: string, color?: number): void } {
-  const size = o.size ?? 16;
-  const style = {
-    fontFamily: FONT,
-    fontSize: size,
-    fill: o.color ?? C.paper2,
-    align: o.align ?? 'left',
-    wordWrap: o.wrap !== undefined,
-    wordWrapWidth: o.wrap ?? 0,
-    lineHeight: size + 2,
-  } as const;
-  const box = new Container() as Container & { set(s: string, color?: number): void };
-  const main = new Text({
-    text: str,
-    style,
-    resolution: 1,
-    roundPixels: true,
-    textureStyle: { scaleMode: 'nearest' },
-  });
-  const sh = new Text({
-    text: str,
-    style: { ...style, fill: C.night0 },
-    resolution: 1,
-    roundPixels: true,
-    textureStyle: { scaleMode: 'nearest' },
-  });
-  const ax = o.align === 'center' ? 0.5 : o.align === 'right' ? 1 : 0;
-  for (const t of [sh, main]) t.anchor.set(ax, 0);
-  sh.position.set(1, 1);
-  sh.visible = o.shadow !== false;
-  box.addChild(sh, main);
-  const fit = (): void => {
-    if (o.fit === undefined) return;
-    const small = main.width > o.fit;
-    const fs = small ? 8 : size;
-    if (main.style.fontSize !== fs) {
-      main.style.fontSize = fs;
-      sh.style.fontSize = fs;
-      main.style.lineHeight = fs + 2;
-      sh.style.lineHeight = fs + 2;
-      main.style.wordWrapWidth = o.wrap ?? 0;
+const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
+const measureCtx = document.createElement('canvas').getContext('2d')!;
+
+function wrapLines(str: string, size: number, wrap: number | undefined): string[] {
+  measureCtx.font = `${size}px ${FONT}`;
+  const out: string[] = [];
+  for (const para of str.split('\n')) {
+    if (!wrap) {
+      out.push(para);
+      continue;
     }
+    let line = '';
+    for (const word of para.split(' ')) {
+      const next = line ? `${line} ${word}` : word;
+      if (line && measureCtx.measureText(next).width > wrap) {
+        out.push(line);
+        line = word;
+      } else line = next;
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+/**
+ * Pixel text rendered by us (not Pixi Text) so every platform uses the same Tiny5 metrics:
+ * line box = size + 2, baseline at 0.875 × size. Draws a 1-px dark drop shadow into the same texture.
+ */
+export function text(str: string, o: TextOpts = {}): Container & { set(s: string, color?: number): void } {
+  const box = new Container() as Container & { set(s: string, color?: number): void };
+  const sprite = new Sprite(Texture.EMPTY);
+  box.addChild(sprite);
+  let color = o.color ?? C.paper2;
+  const draw = (s: string): void => {
+    let size: number = o.size ?? 16;
+    let lines = wrapLines(s, size, o.wrap);
+    measureCtx.font = `${size}px ${FONT}`;
+    let width = Math.max(1, ...lines.map((l) => Math.ceil(measureCtx.measureText(l).width)));
+    if (o.fit !== undefined && width > o.fit && size > 8) {
+      size = 8;
+      lines = wrapLines(s, size, o.wrap);
+      measureCtx.font = `${size}px ${FONT}`;
+      width = Math.max(1, ...lines.map((l) => Math.ceil(measureCtx.measureText(l).width)));
+    }
+    const lineH = size + 2;
+    const [cv, ctx] = canvas(width + 2, lines.length * lineH + 1);
+    ctx.font = `${size}px ${FONT}`;
+    ctx.textBaseline = 'alphabetic';
+    const base = Math.round(size * 0.875);
+    const ax = o.align === 'center' ? 0.5 : o.align === 'right' ? 1 : 0;
+    lines.forEach((l, i) => {
+      const lw = measureCtx.measureText(l).width;
+      const x = Math.round((width - lw) * ax);
+      const y = i * lineH + base;
+      if (o.shadow !== false) {
+        ctx.fillStyle = CSS.night0;
+        ctx.fillText(l, x + 1, y + 1);
+      }
+      ctx.fillStyle = hex(color);
+      ctx.fillText(l, x, y);
+    });
+    const old = sprite.texture;
+    sprite.texture = tex(cv);
+    if (old !== Texture.EMPTY) old.destroy(true);
+    sprite.anchor.set(ax, 0);
   };
-  box.set = (s: string, color?: number) => {
-    main.style.fontSize = size;
-    sh.style.fontSize = size;
-    main.text = s;
-    sh.text = s;
-    if (color !== undefined) main.style.fill = color;
-    fit();
+  box.set = (s: string, c?: number) => {
+    if (c !== undefined) color = c;
+    draw(s);
   };
-  fit();
+  draw(str);
   return box;
 }
