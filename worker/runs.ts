@@ -1,5 +1,14 @@
 // Run lifecycle on the server: issue seeds/tokens, then verify submitted logs by replaying them.
-import { CONTENT_HASH, ENGINE_VERSION, fromBase64Url, IllegalAction, powerKey, replayState, seedFromHex, summarize } from '../src/engine';
+import {
+  CONTENT_HASH,
+  ENGINE_VERSION,
+  fromBase64Url,
+  IllegalAction,
+  powerKey,
+  replayState,
+  seedFromHex,
+  summarize,
+} from '../src/engine';
 import type { StartReq, StartRes, SubmitReq, SubmitRes } from '../src/shared/api';
 import { myRank } from './board';
 import { authUser, HttpError, json, readJson } from './http';
@@ -10,8 +19,14 @@ const TOKEN_MAX_AGE = 3 * 24 * 3600;
 const seedHex = async (secret: string, label: string): Promise<string> =>
   toHex((await hmacBytes(secret, label)).slice(0, 16));
 
-const tokenSig = (secret: string, runId: string, userId: number, kind: string, issued: number, driver: number) =>
-  hmacHex(secret, `run|${runId}|${userId}|${kind}|${issued}|${driver}`);
+const tokenSig = (
+  secret: string,
+  runId: string,
+  userId: number,
+  kind: string,
+  issued: number,
+  driver: number,
+) => hmacHex(secret, `run|${runId}|${userId}|${kind}|${issued}|${driver}`);
 
 export async function startRun(req: Request, env: Env): Promise<Response> {
   const user = await authUser(req, env);
@@ -69,14 +84,19 @@ export async function startRun(req: Request, env: Env): Promise<Response> {
 export async function submitRun(req: Request, env: Env): Promise<Response> {
   const user = await authUser(req, env);
   const body = await readJson<SubmitReq>(req);
-  if (typeof body.runId !== 'string' || !/^[0-9a-f]{32}$/.test(body.runId) || typeof body.token !== 'string') {
+  if (
+    typeof body.runId !== 'string' ||
+    !/^[0-9a-f]{32}$/.test(body.runId) ||
+    typeof body.token !== 'string'
+  ) {
     throw new HttpError(400, 'bad_request');
   }
   const [kindRaw, issuedRaw, driverRaw, sig] = body.token.split('.');
   const kind = kindRaw === 'daily' ? 'daily' : kindRaw === 'standard' ? 'standard' : null;
   const issued = Number(issuedRaw);
   const driver = Number(driverRaw);
-  if (!kind || !sig || !Number.isInteger(issued) || (driver !== 1 && driver !== 2)) throw new HttpError(400, 'bad_token');
+  if (!kind || !sig || !Number.isInteger(issued) || (driver !== 1 && driver !== 2))
+    throw new HttpError(400, 'bad_token');
   const expect = await tokenSig(env.SEED_SECRET, body.runId, user.id, kind, issued, driver);
   if (!safeEqual(expect, sig)) throw new HttpError(403, 'bad_token');
   const now = Math.floor(Date.now() / 1000);
@@ -113,14 +133,26 @@ export async function submitRun(req: Request, env: Env): Promise<Response> {
     if (state.phase !== 'over') throw new IllegalAction('not_finished');
     summary = summarize(state, actions);
   } catch (e) {
-    if (e instanceof IllegalAction && e.reason === 'engine_outdated') throw new HttpError(409, 'engine_outdated');
+    if (e instanceof IllegalAction && e.reason === 'engine_outdated')
+      throw new HttpError(409, 'engine_outdated');
     throw new HttpError(422, 'replay_failed');
   }
 
   const out = summary.output;
   const peak = summary.peak;
   const db = env.DB;
-  const runCols = [summary.stopsCleared, summary.points, out.toString(), powerKey(out), peak.toString(), powerKey(peak), summary.peakHand, summary.ringStop, log, now] as const;
+  const runCols = [
+    summary.stopsCleared,
+    summary.points,
+    out.toString(),
+    powerKey(out),
+    peak.toString(),
+    powerKey(peak),
+    summary.peakHand,
+    summary.ringStop,
+    log,
+    now,
+  ] as const;
   const stmts: D1PreparedStatement[] = [];
   if (kind === 'daily') {
     stmts.push(

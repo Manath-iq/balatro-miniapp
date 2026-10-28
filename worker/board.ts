@@ -68,7 +68,12 @@ function meStmt(env: Env, board: BoardId, userId: number, day: string | null): D
   return env.DB.prepare(SQL[board].me).bind(...withDay(board === 'daily' ? day : null, userId));
 }
 
-export async function myRank(env: Env, board: BoardId, userId: number, day: string | null): Promise<number | null> {
+export async function myRank(
+  env: Env,
+  board: BoardId,
+  userId: number,
+  day: string | null,
+): Promise<number | null> {
   const me = await meStmt(env, board, userId, day).first<Row & { s1: number; s2: number }>();
   if (!me) return null;
   const args = board === 'peak' ? [me.s1] : [me.s1, me.s2];
@@ -110,23 +115,38 @@ export async function leaderboard(req: Request, env: Env): Promise<Response> {
 export async function me(req: Request, env: Env): Promise<Response> {
   const user = await authUser(req, env);
   const day = mskDay(Date.now());
-  const u = await env.DB.prepare(`SELECT show_name FROM users WHERE tg_id = ?1`).bind(user.id).first<{ show_name: number }>();
-  const daily = await env.DB.prepare(`SELECT status, stops, points FROM runs WHERE user_id = ?1 AND day = ?2 AND kind = 'daily'`)
+  const u = await env.DB.prepare(`SELECT show_name FROM users WHERE tg_id = ?1`)
+    .bind(user.id)
+    .first<{ show_name: number }>();
+  const daily = await env.DB.prepare(
+    `SELECT status, stops, points FROM runs WHERE user_id = ?1 AND day = ?2 AND kind = 'daily'`,
+  )
     .bind(user.id, day)
     .first<{ status: string; stops: number | null; points: number | null }>();
   const peak = await env.DB.prepare(`SELECT power_text, hand_type FROM best_peak WHERE user_id = ?1`)
     .bind(user.id)
     .first<{ power_text: string; hand_type: number }>();
-  const ring = await env.DB.prepare(`SELECT ring_stop FROM best_ring WHERE user_id = ?1`).bind(user.id).first<{ ring_stop: number }>();
+  const ring = await env.DB.prepare(`SELECT ring_stop FROM best_ring WHERE user_id = ?1`)
+    .bind(user.id)
+    .first<{ ring_stop: number }>();
   const res: MeRes = {
-    user: { id: user.id, name: user.first_name, username: user.username ?? null, showName: (u?.show_name ?? 1) === 1 },
+    user: {
+      id: user.id,
+      name: user.first_name,
+      username: user.username ?? null,
+      showName: (u?.show_name ?? 1) === 1,
+    },
     daily: {
       day,
       played: daily?.status === 'verified',
       stops: daily?.stops ?? null,
       points: daily?.points ?? null,
     },
-    best: { peak: peak?.power_text ?? null, peakHand: peak?.hand_type ?? null, ringStop: ring?.ring_stop ?? null },
+    best: {
+      peak: peak?.power_text ?? null,
+      peakHand: peak?.hand_type ?? null,
+      ringStop: ring?.ring_stop ?? null,
+    },
   };
   return json(res);
 }

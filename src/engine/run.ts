@@ -301,7 +301,8 @@ export function preview(s: RunState, idx: readonly number[]): Preview {
     return mustCard(s, uid);
   });
   const ev = evaluate(cards);
-  const level = buildRules(s).masteryFlat ? 1 : levelOf(s.mastery.xp[ev.type]!);
+  const lvl = levelOf(s.mastery.xp[ev.type]!);
+  const level = buildRules(s).masteryFlat ? Math.ceil(lvl / 2) : lvl;
   const base = handBase(ev.type, level);
   return { type: ev.type, level, t: base.t, n: base.n, scoring: ev.scoring };
 }

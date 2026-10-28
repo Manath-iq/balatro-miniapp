@@ -38,7 +38,15 @@ export async function authUser(req: Request, env: Env): Promise<TgUser> {
      ON CONFLICT(tg_id) DO UPDATE SET first_name = excluded.first_name, last_name = excluded.last_name,
        username = excluded.username, photo_url = excluded.photo_url, lang = excluded.lang, updated_at = excluded.updated_at`,
   )
-    .bind(user.id, user.first_name, user.last_name ?? null, user.username ?? null, user.photo_url ?? null, user.language_code ?? null, now)
+    .bind(
+      user.id,
+      user.first_name,
+      user.last_name ?? null,
+      user.username ?? null,
+      user.photo_url ?? null,
+      user.language_code ?? null,
+      now,
+    )
     .run();
   return user;
 }

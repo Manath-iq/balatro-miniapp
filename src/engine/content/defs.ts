@@ -71,7 +71,7 @@ export interface Rules {
   piggyCap: number;
   wavePer: number;
   waveMax: number;
-  /** Пересменка: all hands score at Стаж level 1. */
+  /** Пересменка: Стаж levels count at half (rounded up). */
   masteryFlat: boolean;
   /** XP multiplier for XP gained from playing hands. */
   xpMul: number;

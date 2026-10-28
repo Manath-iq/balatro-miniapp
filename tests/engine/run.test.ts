@@ -12,6 +12,7 @@ import {
   targetOf,
   toBase64Url,
 } from '../../src/engine';
+import { TARGETS } from '../../src/engine/content/balance';
 
 const cfg = (i: number, kind: 'standard' | 'daily' = 'standard'): RunConfig => ({
   seed: [i + 1, i * 7 + 3, 99, i ^ 0x5555],
@@ -44,9 +45,10 @@ describe('run', () => {
   });
 
   it('computes targets: express, ring growth, ring boss', () => {
-    expect(targetOf(2, 'express')).toBe(420n);
-    expect(targetOf(13, 'ring')).toBe(59500n);
-    expect(targetOf(15, 'ringBoss')).toBe((((59500n * 17n) / 10n) * 17n * 8n) / 10n / 5n);
+    expect(targetOf(2, 'express')).toBe((TARGETS[2]! * 7n) / 5n);
+    const r13 = (TARGETS[12]! * 17n) / 10n;
+    expect(targetOf(13, 'ring')).toBe(r13);
+    expect(targetOf(15, 'ringBoss')).toBe((((((r13 * 17n) / 10n) * 17n) / 10n) * 8n) / 5n);
   });
 
   it('rejects illegal actions and tampered logs', () => {

@@ -46,7 +46,7 @@ export const INSPECTORS: InspectorDef[] = [
     tier: 'line',
     rules(r) {
       r.odMin = 1000000;
-      r.nCap = 10;
+      r.nCap = 14;
     },
   },
   {
@@ -79,7 +79,7 @@ export const INSPECTORS: InspectorDef[] = [
     v1: true,
     tier: 'final',
     onAfterHand(fx, _h, st) {
-      fx.target((st.target * 23n) / 20n);
+      fx.target((st.target * 11n) / 10n);
     },
   },
   {
@@ -88,7 +88,7 @@ export const INSPECTORS: InspectorDef[] = [
     v1: true,
     tier: 'final',
     rules(r) {
-      r.handsPerStop = 3;
+      r.handsPerStop = 4;
       r.discardsPerStop = 0;
       r.odAlways = true;
       r.odMin = 0;

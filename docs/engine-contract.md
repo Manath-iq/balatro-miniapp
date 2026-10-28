@@ -94,7 +94,7 @@ Ties among multiple pairs/trips: the type uses the strongest combination (e.g. 3
 `gauge >= rules.odMin`; if `rules.odAlways` the hand is overdriven regardless of `od`. Order:
 1. `hands -= 1`, `handsUsed += 1`. played = cards at idx (play order); held = remaining hand (slot order).
 2. type/scoring via `evaluate`. waveStep: first hand of the stop → 0; else if `type == prevType` or `waveShield > 0`
-   → `prev waveStep + 1`; else 0. level = `rules.masteryFlat ? 1 : levelOf(xp[type])`. base = `handBase(type, level)`.
+   → `prev waveStep + 1`; else 0. level = `rules.masteryFlat ? ceil(levelOf(xp[type]) / 2) : levelOf(xp[type])`. base = `handBase(type, level)`.
    Emit `handStart`, `base`.
 3. Per scoring card `c` at scoring index `i`: `reps = 1 + punch.retrig + Σ seats onRetrig`. For each rep:
    `t = c.rank`; `t = boss.cardT?(c, t, h, st) ?? t`; T += t; emit `card`. Punch `onScore` → apply + emit `mod`.
@@ -277,11 +277,11 @@ Prices: C 4, U 6, R 8. i18n keys: `p.<id>.name|desc`, `cp.<id>.*`, `pu.<id>.*`, 
 | 1 | auditor (Ревизор) | line | cardT: unpunched card → floor(t/2); onAfterHand: +1 token per punched scoring card, ≤ 3 per stop (count in bossState[1]) |
 | 3 | conductress (Кондукторша Люда) | line | onAfterHand: rotateSeats() |
 | 4 | blackIce (Гололёд) | line | onStopStart: setGauge(50); rules: sparkMul 2/1 |
-| 5 | blackout (Блэкаут) | line | rules: odMin = 1000000, nCap = 10 |
-| 6 | shiftChange (Пересменка) | line | rules: masteryFlat, xpMul 2 |
+| 5 | blackout (Блэкаут) | line | rules: odMin = 1000000, nCap = 14 |
+| 6 | shiftChange (Пересменка) | line | rules: masteryFlat (levels halved, rounded up), xpMul 2 |
 | 7 | trackWorks (Ремонт путей) | line | bossState[0] = repair rank (rng.range(2,14)) at stop start and after each hand; cardT: that rank → 0; cardSparks: that rank → 6 |
-| 21 | depotChief (Начальник депо) | final | onAfterHand: target(floor(target × 23/20)) |
-| 22 | lastTram (Последний трамвай) | final | rules: handsPerStop 3, discardsPerStop 0, odAlways, odMin 0, sparkMul 3/2 |
+| 21 | depotChief (Начальник депо) | final | onAfterHand: target(floor(target × 11/10)) |
+| 22 | lastTram (Последний трамвай) | final | rules: handsPerStop 4, discardsPerStop 0, odAlways, odMin 0, sparkMul 3/2 |
 
 ### Drivers and conditions (E-misc)
 

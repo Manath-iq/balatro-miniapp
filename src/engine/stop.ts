@@ -145,7 +145,8 @@ export function playHand(ctx: Ctx, idx: readonly number[], odRequested: boolean)
 
   let step = 0;
   if (st.prevType >= 0 && (type === st.prevType || st.waveShield > 0)) step = st.waveStep + 1;
-  const level = r.masteryFlat ? 1 : levelOf(s.mastery.xp[type]!);
+  const lvl = levelOf(s.mastery.xp[type]!);
+  const level = r.masteryFlat ? Math.ceil(lvl / 2) : lvl;
   const base = handBase(type, level);
   const gaugeBefore = s.gauge;
 
