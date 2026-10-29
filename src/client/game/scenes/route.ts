@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { inspector } from '../../../engine/content/registry';
+import { condition, driver, inspector } from '../../../engine/content/registry';
 import { C } from '../../gfx/palette';
 import { t } from '../../i18n';
 import { formatPower } from '../../i18n/format';
@@ -55,6 +55,23 @@ export function routeScene(game: Game): Scene {
 
   const opts = s.route.options;
   let y = 60;
+  if (s.cfg.kind === 'daily') {
+    // The daily route rolls its own driver and condition: say which, so the rules are not a surprise.
+    const lines = [
+      `${t('route.driver')}: ${t(`dr.${driver(s.driver).id}.name`)}. ${t(`dr.${driver(s.driver).id}.desc`)}`,
+    ];
+    if (s.condition) {
+      const id = condition(s.condition).id;
+      lines.push(`${t('route.condition')}: ${t(`cd.${id}.name`)}. ${t(`cd.${id}.desc`)}`);
+    }
+    const info = text(lines.join('\n'), { size: 8, color: C.paper1, wrap: 242 });
+    info.position.set(8, 5);
+    const box = new Container();
+    box.position.set(0, y);
+    box.addChild(panel(258, info.height + 10, C.night1, C.volt2, C.night3), info);
+    root.addChild(box);
+    y += info.height + 16;
+  }
   opts.forEach((o, i) => {
     const boss = o.boss ? inspector(o.boss) : null;
     const card = new Container();

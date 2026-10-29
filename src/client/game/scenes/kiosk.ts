@@ -1,8 +1,9 @@
 // Ларёк (shop conveyor), the deck picker for Мастерская/Утиль, and the post-boss reward.
-import { Container, Sprite } from 'pixi.js';
-import type { KioskItem } from '../../../engine';
-import { SHOP } from '../../../engine/content/balance';
+import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
+import type { HandType, KioskItem } from '../../../engine';
+import { ECON, SHOP } from '../../../engine/content/balance';
 import { coupon, passenger, punch } from '../../../engine/content/registry';
+import { levelOf } from '../../../engine/mastery';
 import { C, RARITY_COLOR } from '../../gfx/palette';
 import { t } from '../../i18n';
 import type { Game, Scene } from '../app';
@@ -98,7 +99,22 @@ export function kioskScene(game: Game): Scene {
     // Карман (coupons) and Копилка.
     let y = 48 + 42 + 6;
     label(t('mech.pocket').toUpperCase(), 0, y);
-    label(`${t('mech.piggy').toUpperCase()}: ${s.piggy}◉`, 132, y);
+    label(`${t('mech.piggy').toUpperCase()}: ${s.piggy}◉ (?)`, 132, y);
+    const piggyHit = new Container();
+    piggyHit.hitArea = new Rectangle(132, y - 2, 126, 18);
+    piggyHit.eventMode = 'static';
+    piggyHit.cursor = 'pointer';
+    piggyHit.on('pointertap', () =>
+      showSheet(
+        infoSheet(
+          W - 8,
+          t('mech.piggy'),
+          t('kiosk.piggyHelp', { pct: 50, cap: ECON.piggyCap, back: 75 }),
+          C.amber2,
+        ),
+      ),
+    );
+    body.addChild(piggyHit);
     y += 18;
     s.pocket.forEach((code, i) => {
       const box = new Container();
@@ -110,6 +126,11 @@ export function kioskScene(game: Game): Scene {
       });
       l.position.set(4, 4);
       box.addChild(l);
+      if (code) {
+        box.eventMode = 'static';
+        box.cursor = 'pointer';
+        box.on('pointertap', () => openCoupon(i));
+      }
       body.addChild(box);
     });
     const pg = new Button('+1◉', 56, 24, {
@@ -179,6 +200,9 @@ export function kioskScene(game: Game): Scene {
         },
       });
       b.setEnabled(!!L.buy[i]);
+      // Affordable but blocked: say why instead of just greying the price out.
+      if (!L.buy[i] && s.tokens >= it.price)
+        b.setText(t(it.k === 'coupon' ? 'kiosk.noPocket' : 'kiosk.noSeat'));
       b.position.set(W - 66, Math.floor((h - 28) / 2));
       row.addChild(n, d, b);
       body.addChild(row);
@@ -198,8 +222,16 @@ export function kioskScene(game: Game): Scene {
           draw();
         },
       ],
-      [`${t('btn.workshopShort')} ${SHOP.workshopPrice}◉`, L.workshop, () => pickCard('workshop')],
-      [`${t('btn.scrap')} ${SHOP.scrapPrice}◉`, L.scrap, () => pickCard('scrap')],
+      [`${t('btn.workshopShort')} ${SHOP.workshopPrice}◉`, L.workshop, openWorkshop],
+      [
+        `${t('btn.scrap')} ${SHOP.scrapPrice}◉`,
+        L.scrap,
+        () =>
+          pickCards(t('kiosk.scrapPick'), 1, 1, ([uid]) => {
+            game.act({ t: 'scrap', uid: uid! });
+            sfx('coin');
+          }),
+      ],
     ];
     acts.forEach(([str, on, fn], i) => {
       const btn = new Button(str, bw, 26, { onTap: fn });
@@ -226,56 +258,195 @@ export function kioskScene(game: Game): Scene {
     closeSheet();
     sheet = c;
     c.position.set(4, 122);
+    // Tap the sheet itself to close it (its buttons act first).
+    c.eventMode = 'static';
+    c.on('pointertap', closeSheet);
     root.addChild(c);
   };
 
-  const pickCard = (mode: 'workshop' | 'scrap') => {
+  /** Deck picker: tap cards (min..max), then confirm; a single-card pick applies on tap. */
+  const pickCards = (
+    title: string,
+    min: number,
+    max: number,
+    done: (uids: number[]) => void,
+    header?: (ov: Container, y: number) => number,
+  ) => {
     closeSheet();
-    const k = s.kiosk!;
     const ov = new Container();
-    const deck = s.deck.slice().sort((a, b) => a.suit - b.suit || a.rank - b.rank);
-    const rows = Math.ceil(deck.length / 9);
-    const h = 40 + rows * 35;
-    ov.addChild(panel(258, h, C.night0, C.amber2, C.night2));
-    const ttl =
-      mode === 'workshop'
-        ? `${t('btn.workshop')}: ${k.workshopOffer.map((c) => t(`pu.${punch(c).id}.name`)).join(' / ')}`
-        : t('btn.scrap');
-    const tl = text(`${ttl} — ${t('kiosk.pickCard')}`, { color: C.amber2, wrap: 240 });
+    ov.eventMode = 'static';
+    const tl = text(title, { color: C.amber2, wrap: 244 });
     tl.position.set(6, 6);
-    ov.addChild(tl);
+    let y = 10 + tl.height;
+    const hdr = new Container();
+    y = header ? header(hdr, y) : y;
+    const deck = s.deck.slice().sort((a, b) => a.suit - b.suit || b.rank - a.rank);
+    const top = y;
+    const rows = Math.ceil(deck.length / 9);
+    const h = top + rows * 42 + 34;
+    ov.addChild(panel(258, h, C.night0, C.amber2, C.night2), tl, hdr);
+    const chosen = new Set<number>();
+    const confirm = new Button(t('btn.done'), 90, 24, {
+      fill: C.glass1,
+      edge: C.go1,
+      onTap: () => {
+        if (chosen.size < min) return;
+        ov.destroy({ children: true });
+        done([...chosen]);
+        draw();
+      },
+    });
+    const marks = new Map<number, Graphics>();
     deck.forEach((c, i) => {
+      const x = 6 + (i % 9) * 28;
+      const cy = top + Math.floor(i / 9) * 42;
+      const mark = new Graphics().rect(x - 1, cy - 1, 29, 41).fill(C.go1);
+      mark.visible = false;
+      marks.set(c.uid, mark);
       const sp = new Sprite(cardTexture(c));
-      sp.scale.set(0.6);
-      sp.position.set(6 + (i % 9) * 29, 30 + Math.floor(i / 9) * 35);
+      sp.scale.set(0.56);
+      sp.position.set(x, cy);
       sp.eventMode = 'static';
       sp.cursor = 'pointer';
       sp.on('pointertap', () => {
-        if (mode === 'workshop') {
-          // Pick the first offer; the second is chosen by tapping the title.
-          game.act({ t: 'workshop', uid: c.uid, pick: choice });
-        } else game.act({ t: 'scrap', uid: c.uid });
-        sfx('coin');
-        ov.destroy({ children: true });
-        draw();
+        if (max === 1) {
+          ov.destroy({ children: true });
+          done([c.uid]);
+          draw();
+          return;
+        }
+        if (chosen.has(c.uid)) chosen.delete(c.uid);
+        else if (chosen.size < max) chosen.add(c.uid);
+        else return sfx('error');
+        sfx('select');
+        mark.visible = chosen.has(c.uid);
+        confirm.setEnabled(chosen.size >= min);
       });
-      ov.addChild(sp);
+      ov.addChild(mark, sp);
     });
-    let choice: 0 | 1 = 0;
-    if (mode === 'workshop') {
-      const sw = new Button(t(`pu.${punch(k.workshopOffer[0]).id}.name`), 90, 18, {
-        fill: C.volt0,
-        edge: C.volt2,
-        onTap: () => {
-          choice = choice === 0 ? 1 : 0;
-          sw.setText(t(`pu.${punch(k.workshopOffer[choice]).id}.name`));
-        },
-      });
-      sw.position.set(174, h - 22);
-      ov.addChild(sw);
+    const cancel = new Button(t('btn.cancel'), 90, 24, { onTap: () => ov.destroy({ children: true }) });
+    cancel.position.set(6, h - 30);
+    ov.addChild(cancel);
+    if (max > 1) {
+      confirm.setEnabled(false);
+      confirm.position.set(258 - 96, h - 30);
+      ov.addChild(confirm);
     }
-    const cancel = new Button(t('btn.cancel'), 70, 18, { onTap: () => ov.destroy({ children: true }) });
-    cancel.position.set(6, h - 22);
+    ov.position.set(0, Math.max(0, Math.min(40, core.h - h)));
+    root.addChild(ov);
+  };
+
+  /** Мастерская: both punch offers side by side with their effect; then pick the card. */
+  const openWorkshop = () => {
+    const k = s.kiosk!;
+    let choice: 0 | 1 = 0;
+    pickCards(
+      t('kiosk.workshopPick'),
+      1,
+      1,
+      ([uid]) => {
+        game.act({ t: 'workshop', uid: uid!, pick: choice });
+        sfx('coin');
+      },
+      (hdr, y0) => {
+        const btns: Button[] = [];
+        const desc = text('', { size: 8, color: C.paper1, wrap: 244 });
+        const show = () => {
+          desc.set(t(`pu.${punch(k.workshopOffer[choice]).id}.desc`));
+          btns.forEach((b, i) => {
+            b.alpha = i === choice ? 1 : 0.5;
+          });
+        };
+        k.workshopOffer.forEach((code, i) => {
+          if (!code) return;
+          const b = new Button(t(`pu.${punch(code).id}.name`), 120, 24, {
+            fill: C.volt0,
+            edge: C.volt2,
+            onTap: () => {
+              choice = i as 0 | 1;
+              show();
+            },
+          });
+          b.position.set(6 + i * 126, y0);
+          btns.push(b);
+          hdr.addChild(b);
+        });
+        desc.position.set(6, y0 + 28);
+        hdr.addChild(desc);
+        show();
+        return y0 + 32 + 26;
+      },
+    );
+  };
+
+  /** Pocket coupons in the kiosk: read them and use the ones that work outside a stop. */
+  const openCoupon = (slot: number) => {
+    const code = s.pocket[slot];
+    if (!code) return;
+    const def = coupon(code);
+    const L = game.legal();
+    const ok = !!L?.coupon[slot];
+    const sh = infoSheet(
+      W - 8,
+      t(`cp.${def.id}.name`),
+      t(`cp.${def.id}.desc`),
+      C.amber2,
+      ok ? undefined : t('kiosk.stopOnly'),
+    );
+    const use = new Button(t('btn.use'), 110, 22, {
+      fill: C.amber0,
+      edge: C.amber2,
+      onTap: () => {
+        const tg = def.target;
+        const apply = (extra: { uids?: number[]; hand?: HandType }) => {
+          game.act({ t: 'coupon', slot, ...extra });
+          sfx('levelUp');
+          draw();
+        };
+        if (tg.k === 'cards')
+          pickCards(
+            t('kiosk.pickN', { n: tg.min === tg.max ? tg.min : `${tg.min}-${tg.max}` }),
+            tg.min,
+            tg.max,
+            (uids) => apply({ uids }),
+          );
+        else if (tg.k === 'hand') pickHand((hand) => apply({ hand }));
+        else apply({});
+      },
+    });
+    use.setEnabled(ok);
+    use.position.set(W - 8 - 116, 4);
+    sh.addChild(use);
+    showSheet(sh);
+  };
+
+  /** Hand-type picker (Конспект): every known hand with its current level. */
+  const pickHand = (done: (hand: HandType) => void) => {
+    closeSheet();
+    const ov = new Container();
+    ov.eventMode = 'static';
+    const tl = text(t('kiosk.pickHand'), { color: C.amber2 });
+    tl.position.set(6, 6);
+    const types = [...Array(11).keys()].filter((h) => h < 9 || s.mastery.played[h]! > 0) as HandType[];
+    const h = 30 + Math.ceil(types.length / 2) * 30 + 32;
+    ov.addChild(panel(258, h, C.night0, C.amber2, C.night2), tl);
+    types.forEach((ht, i) => {
+      const b = new Button(
+        `${t(`hand.${ht}`)} ${t('stop.lvl', { n: levelOf(s.mastery.xp[ht]!) })}`,
+        122,
+        26,
+        {
+          onTap: () => {
+            ov.destroy({ children: true });
+            done(ht);
+          },
+        },
+      );
+      b.position.set(6 + (i % 2) * 126, 28 + Math.floor(i / 2) * 30);
+      ov.addChild(b);
+    });
+    const cancel = new Button(t('btn.cancel'), 90, 24, { onTap: () => ov.destroy({ children: true }) });
+    cancel.position.set(6, h - 30);
     ov.addChild(cancel);
     ov.position.set(0, 60);
     root.addChild(ov);
@@ -333,10 +504,35 @@ export function rewardScene(game: Game): Scene {
     root.addChild(c);
     y += h + 6;
   });
-  if (!s.reward!.offers.length || L.reward.every((v) => !v)) {
-    const full = text(t('kiosk.cabinFull'), { align: 'center', color: C.blow1 });
+  if (s.reward!.offers.length && L.reward.every((v) => !v)) {
+    // Cabin full: let the player drop someone off right here (tap a seat twice) to make room.
+    const full = text(t('reward.full'), { align: 'center', color: C.blow1, wrap: 248 });
     full.position.set(129, y);
     root.addChild(full);
+    y += full.height + 4;
+    let armed = -1;
+    const note = text('', { size: 8, align: 'center', color: C.amber2, wrap: 248 });
+    s.cabin.forEach((seat, i) => {
+      const tile = new SeatTile(seat?.code ?? null, 42, 42, () => {
+        if (!seat) return;
+        const d = passenger(seat.code);
+        if (armed !== i) {
+          armed = i;
+          note.set(t('reward.dropConfirm', { name: t(`p.${d.id}.name`), n: Math.floor(d.price / 2) }));
+          sfx('select');
+          return;
+        }
+        game.act({ t: 'sell', seat: i });
+        sfx('coin');
+        game.sync(true);
+      });
+      tile.position.set(i * 43, y);
+      root.addChild(tile);
+    });
+    y += 46;
+    note.position.set(129, y);
+    root.addChild(note);
+    y += 14;
   }
   const skip = new Button(t('btn.skip'), 130, 28, {
     onTap: () => {
@@ -344,7 +540,7 @@ export function rewardScene(game: Game): Scene {
       game.sync();
     },
   });
-  skip.position.set(59, y + 16);
+  skip.position.set(64, y + 10);
   root.addChild(skip);
   return { root };
 }

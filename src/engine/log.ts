@@ -3,7 +3,7 @@ import { CONTENT_HASH } from './content/registry';
 import type { Action, HandType } from './types';
 import { IllegalAction } from './types';
 
-export const ENGINE_VERSION = 1;
+export const ENGINE_VERSION = 2;
 const FORMAT = 1;
 const HEADER = 9;
 export const MAX_ACTIONS = 4000;

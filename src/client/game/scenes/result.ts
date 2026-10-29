@@ -7,7 +7,7 @@ import type { Game, Scene } from '../app';
 import { sfx } from '../feel';
 import { BOT_LINK } from '../net';
 import { text } from '../pixel';
-import { Button } from '../ui';
+import { Button, SeatTile } from '../ui';
 
 export function resultScene(game: Game): Scene {
   const s = game.run!;
@@ -22,7 +22,8 @@ export function resultScene(game: Game): Scene {
   if (won) game.particles.burst(core.x + 129, core.y + 60, 80, [C.go1, C.amber2, C.volt2, C.paper2], 120);
 
   const head = text(t(won ? 'result.win' : 'result.lose'), {
-    size: 16,
+    size: 24,
+    fit: 250,
     align: 'center',
     color: won ? C.go1 : C.blow1,
   });
@@ -35,6 +36,7 @@ export function resultScene(game: Game): Scene {
       v: `${formatPower(s.stats.peak)}${s.stats.peakHand >= 0 ? ` (${t(`hand.${s.stats.peakHand}`)})` : ''}`,
     }),
   ];
+  lines.push(t('result.hands', { n: s.stats.handsPlayed }));
   if (s.stats.ringStop) lines.push(`${t('stop.ring')}: ${s.stats.ringStop}`);
   lines.forEach((l, i) => {
     const tl = text(l, { align: 'center', color: C.paper1, fit: 240 });
@@ -42,7 +44,16 @@ export function resultScene(game: Game): Scene {
     root.addChild(tl);
   });
 
-  let y = 80 + lines.length * 22 + 12;
+  let y = 80 + lines.length * 22 + 4;
+  // The cabin the run ended with.
+  if (s.cabin.some((x) => x)) {
+    s.cabin.forEach((seat, i) => {
+      const tile = new SeatTile(seat?.code ?? null, 42, 42);
+      tile.position.set(129 - (s.cabin.length * 43) / 2 + i * 43, y);
+      root.addChild(tile);
+    });
+    y += 52;
+  }
   if (!depot) {
     // Ranked runs: show the leaderboard places once the server has replayed the log.
     const status = text(game.server ? t('result.sending') : t('result.unranked'), {

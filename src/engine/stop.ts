@@ -274,8 +274,8 @@ export function playHand(ctx: Ctx, idx: readonly number[], odRequested: boolean)
   }
   emit(ctx, { e: 'power', t: acc.t, n: acc.n, power, total: st.total });
 
-  // 8. Gauge: sparks or overdrive drain, then blowout.
-  if (od) {
+  // 8. Gauge: a chosen overdrive drains it; otherwise (and under always-on overdrive) sparks fill it, then blowout.
+  if (od && !r.odAlways) {
     s.gauge = 0;
     emit(ctx, { e: 'gauge', gauge: 0, src: { k: 'base' } });
   } else {

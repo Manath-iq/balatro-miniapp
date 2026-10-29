@@ -42,8 +42,8 @@ export default {
   'route.blue': 'BLUE BRANCH',
   'route.normal': 'REGULAR',
   'route.express': 'EXPRESS',
-  'route.expressInfo': 'target ×1.4 · +5 tokens · +1 kiosk slot',
-  'route.normalInfo': 'steady · +3 tokens',
+  'route.expressInfo': 'target ×1.4 · +5 tokens · +1 kiosk item',
+  'route.normalInfo': 'normal target · +3 tokens',
   'route.bossAhead': 'inspector ahead:',
   'route.inspector': 'INSPECTOR',
   'route.final': 'THE DEPOT',
@@ -138,7 +138,7 @@ export default {
     'CURRENT (orange) = the hand base + the values of the cards in it: 2-10 face value, J 11, Q 12, K 13, A 14.\nVOLTAGE (purple) = the multiplier. Passengers, Seniority and the Green Wave raise it.',
   'guide.stop.title': 'THE STOP',
   'guide.stop.body':
-    'The stop target in watts is at the top. You have 4 hands (PLAY) and 3 discards (DISCARD swaps cards you do not need). Reach the target to ride on and earn tokens. Run out of hands short of it and the ride is over.',
+    'The stop target in watts is at the top. You have 4 hands (PLAY) and 3 discards (DISCARD swaps cards you do not need). Reach the target to ride on and earn tokens, +1 per hand left. Run out of hands short of it and the ride is over.',
   'guide.gauge.title': 'THE GAUGE: OVERDRIVE',
   'guide.gauge.body':
     'Played cards add sparks to the gauge on the right. From 30 you can fire OVERDRIVE: the hand is multiplied by the gauge, e.g. ×1.6 at 60, and the gauge empties. Reach 100 and you get a BLOWOUT: lose a hand. The gauge halves between stops.',
@@ -150,6 +150,27 @@ export default {
     'After each stop you visit the kiosk. Spend tokens ◉ on passengers: each powers up your hands in their own way, tap one to read it. The cabin has 6 seats. There are also tickets (one-off boosts), card punching and scrap. SHIFT refreshes the belt.',
   'guide.boss.title': 'INSPECTORS AND RANKINGS',
   'guide.boss.body':
-    'An inspector with their own rules waits at the end of every line; you can read them on the route map in advance. Beat them and pick a passenger as a reward. After the Depot you can keep riding the Ring line.\nThe DAILY ROUTE is the same for everyone: compare yourself with friends on the LEADERBOARD!',
+    'An inspector with their own rules waits at the end of every line; you can read them on the route map in advance. Beat them and pick a passenger as a reward. After the Depot you can keep riding the Ring line.\nThe DAILY ROUTE is the same for everyone, one try a day. Points = the percent of the target you reach at each stop (up to 300 per stop).',
   'pause.howto': 'HOW TO PLAY',
+  'route.driver': 'Driver',
+  'route.condition': 'Today',
+  'btn.done': 'DONE',
+  'kiosk.pickN': 'Pick cards from your deck: {n}',
+  'kiosk.pickHand': 'Pick a hand type',
+  'kiosk.scrapPick': 'Scrap: pick a card to remove from the deck',
+  'kiosk.workshopPick': 'Workshop: choose a punch, then a card from your deck',
+  'kiosk.stopOnly': 'This ticket only works at a stop',
+  'cp.hint.cards': 'Select cards in your hand ({n}) and tap USE',
+  'cp.hint.hand': 'Select cards: the ticket applies to their hand type',
+  'reward.full': 'The cabin is full. Tap a passenger twice to drop them off and make room:',
+  'reward.dropConfirm': 'Tap again to drop off {name} (+{n} tokens)',
+  'kiosk.noSeat': 'NO SEAT',
+  'kiosk.noPocket': 'POCKET FULL',
+  'result.hands': 'Hands played: {n}',
+  'stop.plateIncome': 'pays +{n} ◉',
+  'stop.incomeTitle': 'Stop pay',
+  'stop.incomeBody':
+    'Clearing the stop pays +{n} tokens, +1 more per hand left, and +{bonus} if you scored double the target.',
+  'kiosk.piggyHelp':
+    'Save tokens (+1 per tap). When you beat the next inspector they come back with a +{pct}% bonus (up to +{cap}). Break the piggy bank early and you only get {back}% back.',
 } as const satisfies Record<string, string>;

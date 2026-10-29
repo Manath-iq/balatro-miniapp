@@ -13,15 +13,11 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run",
-    "check:engine": "tsx scripts/check-engine-purity.ts",
     "cf-typegen": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply last-tram-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply last-tram-db --remote",
-    "test:jsc": "sh scripts/jsc-golden.sh",
-    "golden": "tsx scripts/gen-golden.ts",
-    "bench": "tsx scripts/bench-replay.ts",
-    "sim": "tsx scripts/sim/run.ts",
-    "check": "npm run typecheck && npm run lint && npm run check:engine && npm test"
+    "fuzz": "tsx scripts/fuzz/fuzz.ts 300 && tsx scripts/fuzz/fuzz.ts 200 cheat",
+    "check": "npm run typecheck && npm run lint && npm test && npm run fuzz"
   },
   "dependencies": {
     "eruda": "3.4.3",

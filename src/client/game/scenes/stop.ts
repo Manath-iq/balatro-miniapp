@@ -1,7 +1,9 @@
 // The stop screen: cabin, score panel, overdrive gauge, the hand, and the animated scoring cascade.
 import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
 import { type Card, type GameEvent, preview } from '../../../engine';
+import { ECON } from '../../../engine/content/balance';
 import { coupon, inspector, passenger } from '../../../engine/content/registry';
+import { buildRules } from '../../../engine/ctx';
 import { C } from '../../gfx/palette';
 import { t } from '../../i18n';
 import { formatPower, formatShort } from '../../i18n/format';
@@ -153,6 +155,23 @@ export function stopScene(game: Game): Scene {
     });
     bl.position.set(face ? 45 : 5, 4);
     side.addChild(bl);
+    const income = ECON.income[st().kind];
+    if (!boss) {
+      const il = text(t('stop.plateIncome', { n: income }), { size: 8, color: C.amber3 });
+      il.position.set(5, 26);
+      side.addChild(il);
+      side.eventMode = 'static';
+      side.on('pointertap', () =>
+        openSheet(
+          infoSheet(
+            258,
+            t('stop.incomeTitle'),
+            t('stop.incomeBody', { n: income, bonus: ECON.overkillBonus }),
+            C.amber2,
+          ),
+        ),
+      );
+    }
     if (boss) {
       side.eventMode = 'static';
       side.on('pointertap', () =>
@@ -404,10 +423,19 @@ export function stopScene(game: Game): Scene {
     discardBtn.setText(`${t('btn.discard')} ${st()?.discards ?? 0}`);
     playBtn.setEnabled(has && !!L?.play);
     discardBtn.setEnabled(has && !!L?.discard);
-    const odOk = !!L?.od && !busy;
-    if (!odOk) odArmed = false;
-    odBtn.setText(odArmed ? `⚡ ×${((100 + s.gauge) / 100).toFixed(2)}` : t('btn.overdrive'));
-    odBtn.setEnabled(odOk);
+    const rules = buildRules(s);
+    const odX = `⚡ ×${((rules.odDen + s.gauge) / rules.odDen).toFixed(2)}`;
+    if (rules.odAlways) {
+      // Final boss: every hand is overdriven by the current gauge.
+      odArmed = false;
+      odBtn.setText(odX);
+      odBtn.setEnabled(true);
+    } else {
+      const odOk = !!L?.od && !busy;
+      if (!odOk) odArmed = false;
+      odBtn.setText(odArmed ? odX : t('btn.overdrive'));
+      odBtn.setEnabled(odOk);
+    }
     info.set(`${t('misc.deck', { n: st()?.draw.length ?? 0 })}`);
     if (st() && idx.length) {
       const p = preview(s, idx);
@@ -430,6 +458,7 @@ export function stopScene(game: Game): Scene {
   };
 
   const toggleOd = () => {
+    if (buildRules(s).odAlways) return;
     odArmed = !odArmed;
     sfx(odArmed ? 'overdrive' : 'deselect');
     haptic.impact('medium');
@@ -442,7 +471,14 @@ export function stopScene(game: Game): Scene {
     const code = s.pocket[slot];
     if (!code) return;
     const def = coupon(code);
-    const sheetC = infoSheet(W, t(`cp.${def.id}.name`), t(`cp.${def.id}.desc`), C.amber2);
+    const tg = def.target;
+    const hint =
+      tg.k === 'cards'
+        ? t('cp.hint.cards', { n: tg.min === tg.max ? tg.min : `${tg.min}-${tg.max}` })
+        : tg.k === 'hand'
+          ? t('cp.hint.hand')
+          : undefined;
+    const sheetC = infoSheet(W, t(`cp.${def.id}.name`), t(`cp.${def.id}.desc`), C.amber2, hint);
     const L = game.legal();
     const use = new Button(t('btn.use'), 100, 20, {
       fill: C.amber0,
