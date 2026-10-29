@@ -5,6 +5,7 @@ import { t } from '../../i18n';
 import { formatPower } from '../../i18n/format';
 import type { Game, Scene } from '../app';
 import { sfx } from '../feel';
+import { openPause } from '../pause';
 import { panel, text } from '../pixel';
 import { tips } from '../tutorial';
 import { Button, SeatTile } from '../ui';
@@ -124,12 +125,7 @@ export function routeScene(game: Game): Scene {
   });
   root.addChild(cab);
 
-  const quit = new Button(t('btn.abandon'), 90, 22, {
-    onTap: () => {
-      game.act({ t: 'end' });
-      game.sync();
-    },
-  });
+  const quit = new Button(t('pause.title'), 90, 22, { onTap: () => openPause(game, true) });
   quit.position.set(0, core.h - 22);
   root.addChild(quit);
   if (opts[0]?.kind === 'branch') void tips(game, ['route']);

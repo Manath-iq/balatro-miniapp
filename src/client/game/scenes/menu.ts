@@ -2,12 +2,13 @@ import { Container } from 'pixi.js';
 import { seedFromHex } from '../../../engine';
 import type { StartRes } from '../../../shared/api';
 import { C } from '../../gfx/palette';
-import { getLang, setLang, t } from '../../i18n';
+import { t } from '../../i18n';
 import { formatPower } from '../../i18n/format';
 import type { Game, Scene } from '../app';
-import { saveSettings, settings, sfx } from '../feel';
+import { sfx } from '../feel';
 import { Spring } from '../fx';
 import { ApiFail, api, online } from '../net';
+import { openPause } from '../pause';
 import { text } from '../pixel';
 import { bestLocal, loadRun } from '../save';
 import { resetTutorial } from '../tutorial';
@@ -127,13 +128,7 @@ export function menuScene(game: Game): Scene {
         fill: C.volt0,
         edge: C.volt2,
         size: 16,
-        onTap: async () => {
-          const day = mskDay();
-          game.startRun(
-            { seed: seedFromHex(await dailySeedHex(day)), kind: 'daily', driver: 1, grade: 1, condition: 0 },
-            day,
-          );
-        },
+        onTap: () => void begin('daily', 1),
       }),
     );
     add(
@@ -147,26 +142,7 @@ export function menuScene(game: Game): Scene {
         },
       }),
     );
-    const snd = add(
-      new Button(`${t('menu.sound')}: ${settings.sound ? t('menu.on') : t('menu.off')}`, 150, 26, {
-        onTap: () => {
-          settings.sound = !settings.sound;
-          saveSettings();
-          snd.setText(`${t('menu.sound')}: ${settings.sound ? t('menu.on') : t('menu.off')}`);
-        },
-      }),
-    );
-    add(
-      new Button(`${t('menu.lang')}: ${getLang().toUpperCase()}`, 150, 26, {
-        onTap: () => {
-          setLang(getLang() === 'ru' ? 'en' : 'ru');
-          try {
-            localStorage.setItem('lt.lang', getLang());
-          } catch {}
-          game.show('menu');
-        },
-      }),
-    );
+    add(new Button(t('menu.settings'), 150, 26, { onTap: () => openPause(game, false) }));
     add(
       new Button(t('menu.howto'), 150, 26, {
         onTap: () => {
@@ -204,14 +180,7 @@ export function menuScene(game: Game): Scene {
           fill: C.night3,
           edge: C.amber2,
           size: 16,
-          onTap: () =>
-            game.startRun({
-              seed: seedFromHex(randomSeedHex()),
-              kind: 'standard',
-              driver: code,
-              grade: 1,
-              condition: 0,
-            }),
+          onTap: () => void begin('standard', code),
         }),
       );
       const d = text(t(`dr.${id}.desc`), { align: 'center', color: C.night7, wrap: 236 });

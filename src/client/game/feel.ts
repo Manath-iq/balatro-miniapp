@@ -1,6 +1,8 @@
 // Sound (procedural ZzFX presets) and haptics. Both respect user settings.
 import { ZZFX } from 'zzfx';
 import { tg } from '../platform/tg';
+import { pace } from './fx';
+import { music } from './music';
 
 // ZzFX params: volume, randomness, frequency, attack, sustain, release, shape, shapeCurve, slide, deltaSlide,
 // pitchJump, pitchJumpTime, repeatTime, noise, modulation, bitCrush, delay, sustainVolume, decay, tremolo
@@ -29,14 +31,17 @@ export type Sfx = keyof typeof PRESETS;
 
 const samples = new Map<Sfx, number[]>();
 let lastPlay = new Map<Sfx, number>();
-export const settings = { sound: true, haptics: true };
+export const settings = { sound: true, music: true, haptics: true, speed: 1 };
 
 try {
   const raw = localStorage.getItem('lt.settings');
   if (raw) Object.assign(settings, JSON.parse(raw));
 } catch {}
+pace.speed = settings.speed;
 
 export function saveSettings(): void {
+  pace.speed = settings.speed;
+  if (ZZFX.audioContext.state === 'running') music.setEnabled(settings.music);
   try {
     localStorage.setItem('lt.settings', JSON.stringify(settings));
   } catch {}
@@ -44,7 +49,7 @@ export function saveSettings(): void {
 
 export function unlockAudio(): void {
   const once = (): void => {
-    void ZZFX.audioContext.resume();
+    void ZZFX.audioContext.resume().then(() => music.setEnabled(settings.music));
   };
   window.addEventListener('pointerup', once);
   window.addEventListener('touchend', once);

@@ -2,6 +2,8 @@
 // palette bands with Bayer dither. Runs on its own small WebGL2 canvas behind the Pixi canvas.
 import { Filter, GlProgram, Sprite, Texture } from 'pixi.js';
 import { C, rgb } from '../gfx/palette';
+import { perfClass } from '../platform/tg';
+import { music } from './music';
 
 const VERT = `in vec2 aPosition;
 out vec2 vTextureCoord;
@@ -98,6 +100,8 @@ export class Background {
         },
       });
       this.view.filters = [this.filter];
+      const pc = perfClass();
+      this.filter.resolution = pc === 'LOW' ? 0.34 : pc === 'AVERAGE' ? 0.5 : 1;
     } catch {
       this.view.tint = C.night2;
     }
@@ -110,12 +114,21 @@ export class Background {
   }
 
   setMood(m: Mood): void {
+    music.mood(m);
     this.target = MOODS[m].flatMap(rgb);
   }
 
   pulse(color: number, amount = 1): void {
     this.flash = Math.min(1, this.flash + amount);
     this.flashCol = rgb(color);
+  }
+
+  /** Called when the frame rate stays low: renders the shader at a lower resolution. */
+  degrade(): boolean {
+    const res = typeof this.filter?.resolution === 'number' ? this.filter.resolution : 1;
+    if (!this.filter || res <= 0.26) return false;
+    this.filter.resolution = Math.max(0.25, res / 2);
+    return true;
   }
 
   setRunning(on: boolean): void {

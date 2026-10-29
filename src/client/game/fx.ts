@@ -42,10 +42,19 @@ export function wait(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms / k));
 }
 
+const reducedMotion = (() => {
+  try {
+    return matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+})();
+
 export class Shake {
   trauma = 0;
   private t = 0;
   add(v: number): void {
+    if (reducedMotion) return;
     this.trauma = Math.min(1, this.trauma + v);
   }
   offset(dt: number): [number, number] {

@@ -248,21 +248,31 @@ export function stopScene(game: Game): Scene {
   const cardsLayer = new Container();
   root.addChild(cardsLayer);
   const views = new Map<number, CardView>();
-  let sortMode: 'slot' | 'rank' | 'suit' = 'rank';
+  let sortMode: 'custom' | 'rank' | 'suit' = 'rank';
+  /** Hand order after the player drags cards around (sortMode 'custom'). */
+  let custom: number[] = [];
   let busy = false;
   let odArmed = false;
 
   const card = (uid: number): Card => s.deck.find((c) => c.uid === uid)!;
   const displayOrder = (): number[] => {
     const hand = st().hand.slice();
+    if (sortMode === 'custom') {
+      const inHand = new Set(hand);
+      const out = custom.filter((u) => inHand.has(u));
+      for (const u of hand) if (!out.includes(u)) out.push(u);
+      custom = out;
+      return out.slice();
+    }
     if (sortMode === 'rank') hand.sort((a, b) => card(b).rank - card(a).rank || card(a).suit - card(b).suit);
     if (sortMode === 'suit') hand.sort((a, b) => card(a).suit - card(b).suit || card(b).rank - card(a).rank);
     return hand;
   };
+  const handSpan = (n: number) => Math.min(35, n > 1 ? (W - CARD_W) / (n - 1) : 0);
   const layoutHand = () => {
     const order = displayOrder();
     const n = order.length;
-    const span = Math.min(35, n > 1 ? (W - CARD_W) / (n - 1) : 0);
+    const span = handSpan(n);
     order.forEach((uid, i) => {
       const v = views.get(uid);
       if (!v) return;
@@ -281,10 +291,71 @@ export function stopScene(game: Game): Scene {
   };
   const addView = (uid: number, fromDeck: boolean) => {
     const v = new CardView(card(uid), fromDeck ? W - 20 : W / 2, fromDeck ? handY + 40 : handY);
-    v.on('pointertap', () => toggle(v));
+    v.on('pointerdown', (e) => {
+      if (busy) return;
+      const p = e.getLocalPosition(root);
+      drag = { v, x0: p.x, y0: p.y, dy: 0, axis: null };
+    });
+    v.on('pointerup', endDrag);
+    v.on('pointerupoutside', endDrag);
     views.set(uid, v);
     cardsLayer.addChild(v);
   };
+  // Tap selects; dragging sideways reorders the hand (cards score left to right); flicking a card up plays.
+  let drag: { v: CardView; x0: number; y0: number; dy: number; axis: 'x' | 'y' | null } | null = null;
+  cardsLayer.eventMode = 'static';
+  cardsLayer.on('globalpointermove', (e) => {
+    if (!drag || busy) return;
+    const p = e.getLocalPosition(root);
+    const dx = p.x - drag.x0;
+    drag.dy = p.y - drag.y0;
+    if (!drag.axis) {
+      if (Math.abs(dx) < 6 && Math.abs(drag.dy) < 6) return;
+      drag.axis = Math.abs(dx) >= Math.abs(drag.dy) ? 'x' : 'y';
+      if (drag.axis === 'x') {
+        custom = displayOrder();
+        sortMode = 'custom';
+      }
+      cardsLayer.addChild(drag.v);
+    }
+    const v = drag.v;
+    if (drag.axis === 'x') {
+      const n = custom.length;
+      const i = Math.max(
+        0,
+        Math.min(n - 1, Math.round((p.x - W / 2) / Math.max(1, handSpan(n)) + (n - 1) / 2)),
+      );
+      const cur = custom.indexOf(v.cardUid);
+      if (cur >= 0 && i !== cur) {
+        custom.splice(cur, 1);
+        custom.splice(i, 0, v.cardUid);
+        haptic.select();
+        layoutHand();
+        cardsLayer.addChild(v);
+      }
+      v.sx.target = p.x;
+      v.sy.target = handY - 16;
+    } else {
+      v.sy.target = handY - (v.selected ? 14 : 0) + Math.max(-60, Math.min(10, drag.dy));
+    }
+  });
+  function endDrag(): void {
+    const d = drag;
+    drag = null;
+    if (!d || busy) return;
+    if (!d.axis) {
+      toggle(d.v);
+      return;
+    }
+    if (d.axis === 'y' && d.dy < -36) {
+      if (!d.v.selected) toggle(d.v);
+      if (d.v.selected) {
+        doPlay();
+        return;
+      }
+    }
+    layoutHand();
+  }
   const toggle = (v: CardView) => {
     if (busy) return;
     closeSheet();

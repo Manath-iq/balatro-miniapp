@@ -33,7 +33,7 @@ export function topScene(game: Game): Scene {
   root.addChild(list);
   const buttons: Button[] = [];
 
-  const valueOf = (board: BoardId, e: BoardEntry): string =>
+  const boardValue = (board: BoardId, e: BoardEntry): string =>
     board === 'daily'
       ? t('top.dayVal', { s: e.extra, p: e.value })
       : board === 'peak'
@@ -52,7 +52,7 @@ export function topScene(game: Game): Scene {
     rank.position.set(6, 4);
     const name = text(e.me ? `${e.name} · ${t('top.me')}` : e.name, { color: C.paper2, fit: 110 });
     name.position.set(40, 4);
-    const val = text(valueOf(board, e), { align: 'right', color: C.go1, fit: 104 });
+    const val = text(boardValue(board, e), { align: 'right', color: C.go1, fit: 104 });
     val.position.set(W - 6, 4);
     c.addChild(rank, name, val);
     return c;
@@ -65,7 +65,9 @@ export function topScene(game: Game): Scene {
   };
 
   const load = async (board: BoardId): Promise<void> => {
-    buttons.forEach((b, i) => b.setEnabled(tabs[i]![0] !== board));
+    buttons.forEach((b, i) => {
+      b.setEnabled(tabs[i]![0] !== board);
+    });
     list.removeChildren().forEach((c) => {
       c.destroy({ children: true });
     });
@@ -83,7 +85,9 @@ export function topScene(game: Game): Scene {
     });
     if (!res.entries.length) return message(t('top.empty'));
     const maxRows = Math.max(3, Math.floor((core.h - 64 - 34) / 26));
-    res.entries.slice(0, maxRows).forEach((e, i) => list.addChild(row(board, e, i * 26)));
+    res.entries.slice(0, maxRows).forEach((e, i) => {
+      list.addChild(row(board, e, i * 26));
+    });
     if (res.me && !res.entries.slice(0, maxRows).some((e) => e.me)) {
       list.addChild(row(board, res.me, core.h - 64 - 24));
     }

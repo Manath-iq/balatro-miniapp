@@ -127,3 +127,27 @@ export function setClosingConfirmation(on: boolean): void {
   if (!can('6.2') || !tg) return;
   attempt(() => (on ? tg.enableClosingConfirmation() : tg.disableClosingConfirmation()));
 }
+
+/** Opens Telegram's "share to chat" picker; outside Telegram falls back to the Web Share API or the clipboard. */
+export function shareLink(url: string, message: string): void {
+  const link = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(message)}`;
+  if (tg && attempt(() => tg.openTelegramLink(link))) return;
+  if (navigator.share) {
+    void navigator.share({ text: message, url }).catch(() => undefined);
+    return;
+  }
+  void navigator.clipboard?.writeText(`${message} ${url}`).catch(() => undefined);
+}
+
+let backCb: (() => void) | null = null;
+/** Shows Telegram's header Back button wired to `cb`, or hides it when `cb` is null. */
+export function setBackButton(cb: (() => void) | null): void {
+  if (!tg || !can('6.1')) return;
+  if (backCb) attempt(() => tg.BackButton.offClick(backCb!));
+  backCb = cb;
+  attempt(() => {
+    if (!cb) return tg.BackButton.hide();
+    tg.BackButton.onClick(cb);
+    tg.BackButton.show();
+  });
+}

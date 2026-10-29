@@ -2,8 +2,10 @@ import { Container } from 'pixi.js';
 import { C } from '../../gfx/palette';
 import { t } from '../../i18n';
 import { formatPower } from '../../i18n/format';
+import { shareLink } from '../../platform/tg';
 import type { Game, Scene } from '../app';
 import { sfx } from '../feel';
+import { BOT_LINK } from '../net';
 import { text } from '../pixel';
 import { Button } from '../ui';
 
@@ -40,7 +42,30 @@ export function resultScene(game: Game): Scene {
     root.addChild(tl);
   });
 
-  let y = 80 + lines.length * 22 + 20;
+  let y = 80 + lines.length * 22 + 12;
+  if (!depot) {
+    // Ranked runs: show the leaderboard places once the server has replayed the log.
+    const status = text(game.server ? t('result.sending') : t('result.unranked'), {
+      align: 'center',
+      color: C.night7,
+      wrap: 240,
+    });
+    status.position.set(129, y);
+    root.addChild(status);
+    void game.submission?.then((r) => {
+      if (status.destroyed || !game.server) return;
+      if (!r) return status.set(t('result.sendFail'), C.blow1);
+      const parts: string[] = [];
+      for (const b of ['daily', 'peak', 'ring'] as const) {
+        const n = r.ranks[b];
+        if (n === null) continue;
+        const board = t(`top.${b}`);
+        parts.push(n > 1000 ? t('result.rankFar', { board }) : t('result.rank', { board, n }));
+      }
+      status.set(parts.length ? parts.join('\n') : t('result.unranked'), parts.length ? C.amber2 : C.night7);
+    });
+    y += 44;
+  }
   if (depot) {
     const q = text(t('result.depot'), { align: 'center', color: C.volt2, wrap: 240 });
     q.position.set(129, y);
@@ -77,6 +102,20 @@ export function resultScene(game: Game): Scene {
     });
     menu.position.set(44, y);
     root.addChild(menu);
+    y += 38;
+    const share = new Button(t('btn.share'), 170, 26, {
+      fill: C.volt0,
+      edge: C.volt2,
+      onTap: () => {
+        const msg = t(s.cfg.kind === 'daily' ? 'share.daily' : 'share.run', {
+          stops: s.stats.stopsCleared,
+          peak: formatPower(s.stats.peak),
+        });
+        shareLink(BOT_LINK, msg);
+      },
+    });
+    share.position.set(44, y);
+    root.addChild(share);
   }
   return { root };
 }

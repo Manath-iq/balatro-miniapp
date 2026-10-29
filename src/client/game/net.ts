@@ -36,3 +36,6 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
     clearTimeout(timer);
   }
 }
+
+/** Deep link that opens the bot's welcome with the Play button. */
+export const BOT_LINK = 'https://t.me/balatro_minibot?start=play';

@@ -19,6 +19,7 @@ import {
   onActiveChange,
   onInsetsChanged,
   ready,
+  setBackButton,
   setClosingConfirmation,
   setupTelegram,
 } from '../platform/tg';
@@ -27,6 +28,7 @@ import { Background } from './bg';
 import { setAudioActive, unlockAudio } from './feel';
 import { Particles, Pops, Shake } from './fx';
 import { api } from './net';
+import { togglePause } from './pause';
 import { clearRun, loadRun, recordBest, type ServerRun, saveRun } from './save';
 import { fitCanvas, measure, type Screen } from './screen';
 
@@ -89,6 +91,11 @@ export class Game {
     this.pixi.stage.addChild(this.world, this.fxLayer, this.overlay);
     this.pixi.ticker.add((tk) => this.tick(tk.deltaMS / 1000));
     window.addEventListener('resize', () => this.relayout());
+    // After a lost GPU context Pixi re-uploads textures; rebuild the scene so every canvas texture is fresh.
+    this.pixi.canvas.addEventListener('webglcontextrestored', () => this.sync(true));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.back();
+    });
     onInsetsChanged(() => this.relayout());
     onActiveChange((on) => {
       setAudioActive(on);
@@ -119,8 +126,18 @@ export class Game {
     this.sync(true);
   }
 
+  private fpsTime = 0;
+  private fpsFrames = 0;
   private tick(dt: number): void {
     const step = Math.min(dt, 0.05);
+    // Frame-rate probe: if the background shader keeps us under ~40 fps, render it at a lower resolution.
+    this.fpsTime += dt;
+    this.fpsFrames++;
+    if (this.fpsTime >= 3) {
+      if (this.fpsFrames / this.fpsTime < 40 && document.visibilityState === 'visible') this.bg.degrade();
+      this.fpsTime = 0;
+      this.fpsFrames = 0;
+    }
     this.bg.tick(performance.now(), step);
     this.scene?.update?.(step);
     this.particles.update(step);
@@ -141,6 +158,17 @@ export class Game {
     if (!f) throw new Error(`no scene ${name}`);
     this.scene = f(this);
     this.world.addChild(this.scene.root);
+    this.shown = name;
+    setBackButton(name === 'menu' ? null : () => this.back());
+  }
+  private shown = 'menu';
+
+  /** Back button / Escape: leaderboard returns, inside a run toggles the pause sheet. */
+  back(): void {
+    if (this.shown === 'menu') return;
+    if (this.shown === 'top') this.show(this.backTo ?? 'menu');
+    else if (this.run && this.run.phase !== 'over') togglePause(this, true);
+    else this.quit();
   }
 
   /** Shows the scene matching the run phase. */
