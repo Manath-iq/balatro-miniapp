@@ -3,6 +3,7 @@ import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Card } from '../../engine';
 import { C, CSS, SUIT_CSS } from '../gfx/palette';
 import { getLang } from '../i18n';
+import { drawFace, FACE_H, FACE_W } from './faces';
 
 export const CARD_W = 48;
 export const CARD_H = 66;
@@ -95,16 +96,19 @@ export function cardTexture(c: Pick<Card, 'rank' | 'suit' | 'punch' | 'charge'>)
   const cx = Math.floor(W / 2);
   const cy = Math.floor(H / 2);
   if (c.rank >= 11 && c.rank <= 13) {
+    const accent = col === CSS.suitSpade ? CSS.night6 : col;
     ctx.fillStyle = CSS.night3;
     ctx.fillRect(cx - 12, cy - 13, 24, 28);
-    ctx.fillStyle = col === CSS.suitSpade ? CSS.night6 : col;
+    ctx.fillStyle = accent;
     ctx.fillRect(cx - 11, cy - 14, 22, 1);
-    ctx.fillRect(cx - 11, cy + 13, 22, 1);
-    ctx.font = `16px ${FONT}`;
-    ctx.fillStyle = CSS.paper2;
-    const m = ctx.measureText(label).width;
-    ctx.fillText(label, Math.round(cx - m / 2), cy - 12);
-    drawSuit(ctx, c.suit, cx - 3, cy + 4, 1, col === CSS.suitSpade ? CSS.paper1 : col);
+    ctx.fillRect(cx - 11, cy + 15, 22, 1);
+    drawFace(
+      ctx,
+      c.rank as 11 | 12 | 13,
+      cx - FACE_W / 2,
+      cy + 15 - FACE_H,
+      col === CSS.suitSpade ? CSS.night5 : col,
+    );
   } else {
     drawSuit(ctx, c.suit, cx - 7, cy - 7, 2);
     if (c.rank === 14) {
