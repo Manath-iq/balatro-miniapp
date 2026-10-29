@@ -75,10 +75,7 @@ export class Button extends Container {
     g.rect(0, dy + 1, w, h - 4).fill(edge);
     g.rect(1, dy + 1, w - 2, h - 4).fill(fill);
     g.rect(2, dy + 1, w - 4, 1).fill(this.enabled ? edge : C.night3);
-    this.caption.position.set(
-      Math.floor(w / 2),
-      Math.floor((h - 2) / 2) - (this.opts.size === 16 ? 8 : 4) + dy,
-    );
+    this.caption.position.set(Math.floor(w / 2), Math.floor((h - 2) / 2) - this.caption.mid + dy);
     this.caption.alpha = this.enabled ? 1 : 0.45;
   }
 }

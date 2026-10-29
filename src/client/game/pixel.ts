@@ -1,4 +1,4 @@
-// Code-drawn pixel art: suits, cards, panels and pixel text (Tiny5).
+// Code-drawn pixel art: suits, cards, panels and pixel text (Tiny5; Pixelify Sans for small text).
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Card } from '../../engine';
 import { C, CSS, SUIT_CSS } from '../gfx/palette';
@@ -8,6 +8,35 @@ import { drawFace, FACE_H, FACE_W } from './faces';
 export const CARD_W = 48;
 export const CARD_H = 66;
 export const FONT = 'Tiny5';
+export const BODY_FONT = 'Pixelify';
+
+/** Concrete faces behind the logical text sizes; `fit` steps down through them. */
+interface Face {
+  css: string;
+  /** Icon pixel scale. */
+  k: number;
+  base: number;
+  lineH: number;
+  /** Row of the capital letters' vertical centre, for centring labels. */
+  mid: number;
+}
+const face = (family: string, px: number, k: number, base: number, lineH: number, mid: number): Face => ({
+  css: `${px}px ${family}`,
+  k,
+  base,
+  lineH,
+  mid,
+});
+const BIG = face(FONT, 24, 3, 21, 26, 14);
+const BODY = face(FONT, 16, 2, 14, 18, 8);
+// Pixelify only renders cleanly on its native 11 px grid; it replaces Tiny5 8, which was too small to read.
+const SMALL = face(BODY_FONT, 11, 1, 9, 13, 5);
+const TINY = face(FONT, 8, 1, 7, 10, 4);
+const LADDER: Record<8 | 16 | 24, Face[]> = {
+  24: [BIG, BODY, SMALL, TINY],
+  16: [BODY, SMALL, TINY],
+  8: [SMALL, TINY],
+};
 
 const SUITS: string[][] = [
   ['...X...', '..XXX..', '.XXXXX.', 'XXXXXXX', 'XXXXXXX', '.X.X.X.', '..XXX..'],
@@ -196,9 +225,9 @@ function segments(line: string): string[] {
   return line.split(ICON_RE).filter((x) => x !== '');
 }
 
-function measureLine(line: string, size: number): number {
-  measureCtx.font = `${size}px ${FONT}`;
-  const k = size / 8;
+function measureLine(line: string, f: Face): number {
+  measureCtx.font = f.css;
+  const k = f.k;
   let w = 0;
   for (const seg of segments(line)) {
     const icon = ICONS[seg];
@@ -212,11 +241,12 @@ function drawLine(
   line: string,
   x: number,
   base: number,
-  size: number,
+  f: Face,
   color: string,
   flat = false,
 ): void {
-  const k = size / 8;
+  const k = f.k;
+  measureCtx.font = f.css;
   let cx = x;
   for (const seg of segments(line)) {
     const icon = ICONS[seg];
@@ -239,7 +269,7 @@ function drawLine(
   }
 }
 
-function wrapLines(str: string, size: number, wrap: number | undefined): string[] {
+function wrapLines(str: string, size: Face, wrap: number | undefined): string[] {
   const out: string[] = [];
   for (const para of str.split('\n')) {
     if (!wrap) {
@@ -259,34 +289,48 @@ function wrapLines(str: string, size: number, wrap: number | undefined): string[
   return out;
 }
 
-export function text(str: string, o: TextOpts = {}): Container & { set(s: string, color?: number): void } {
-  const box = new Container() as Container & { set(s: string, color?: number): void };
+export type PixelText = Container & { set(s: string, color?: number): void; mid: number };
+
+export function text(str: string, o: TextOpts = {}): PixelText {
+  const box = new Container() as PixelText;
   const sprite = new Sprite(Texture.EMPTY);
   box.addChild(sprite);
   let color = o.color ?? C.paper2;
   const draw = (s: string): void => {
-    let size: number = o.size ?? 16;
-    let lines = wrapLines(s, size, o.wrap);
-    let width = Math.max(1, ...lines.map((l) => Math.ceil(measureLine(l, size))));
-    if (o.fit !== undefined && width > o.fit && size > 8) {
-      size = 8;
-      lines = wrapLines(s, size, o.wrap);
-      width = Math.max(1, ...lines.map((l) => Math.ceil(measureLine(l, size))));
+    const ladder = LADDER[o.size ?? 16];
+    let f = ladder[0]!;
+    let lines = wrapLines(s, f, o.wrap);
+    let width = Math.max(1, ...lines.map((l) => Math.ceil(measureLine(l, f))));
+    for (let i = 1; o.fit !== undefined && width > o.fit && i < ladder.length; i++) {
+      f = ladder[i]!;
+      lines = wrapLines(s, f, o.wrap);
+      width = Math.max(1, ...lines.map((l) => Math.ceil(measureLine(l, f))));
     }
-    const lineH = size + 2;
-    const [cv, ctx] = canvas(width + 2, lines.length * lineH + 1);
-    ctx.font = `${size}px ${FONT}`;
-    ctx.textBaseline = 'alphabetic';
-    const base = Math.round(size * 0.875);
+    box.mid = f.mid;
+    const w = width + 2;
+    const h = lines.length * f.lineH + 1;
+    // Draw the words once, snap anti-aliased edges to whole pixels, then stamp a hard shadow under them.
+    const [tc, tctx] = canvas(w, h);
+    tctx.font = f.css;
+    tctx.textBaseline = 'alphabetic';
     const ax = o.align === 'center' ? 0.5 : o.align === 'right' ? 1 : 0;
     lines.forEach((l, i) => {
-      const lw = measureLine(l, size);
-      const x = Math.round((width - lw) * ax);
-      const y = i * lineH + base;
-      measureCtx.font = `${size}px ${FONT}`;
-      if (o.shadow !== false) drawLine(ctx, l, x + 1, y + 1, size, CSS.night0, true);
-      drawLine(ctx, l, x, y, size, hex(color));
+      const x = Math.round((width - measureLine(l, f)) * ax);
+      drawLine(tctx, l, x, i * f.lineH + f.base, f, hex(color));
     });
+    const img = tctx.getImageData(0, 0, w, h);
+    const px = img.data;
+    for (let i = 3; i < px.length; i += 4) px[i] = px[i]! >= 110 ? 255 : 0;
+    tctx.putImageData(img, 0, 0);
+    const [cv, ctx] = canvas(w, h);
+    if (o.shadow !== false) {
+      ctx.drawImage(tc, 1, 1);
+      ctx.globalCompositeOperation = 'source-in';
+      ctx.fillStyle = CSS.night0;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.drawImage(tc, 0, 0);
     const old = sprite.texture;
     sprite.texture = tex(cv);
     if (old !== Texture.EMPTY) old.destroy(true);

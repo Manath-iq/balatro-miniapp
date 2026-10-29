@@ -5,6 +5,7 @@ import { C } from '../gfx/palette';
 import { getLang, setLang, t } from '../i18n';
 import type { Game } from './app';
 import { saveSettings, settings } from './feel';
+import { openGuide } from './guide';
 import { panel, text } from './pixel';
 import { Button } from './ui';
 
@@ -81,6 +82,15 @@ export function openPause(game: Game, inRun: boolean): void {
   });
   lang.position.set(10, y);
   box.addChild(lang);
+  y += 32;
+  const howto = new Button(t('pause.howto'), W - 20, 26, {
+    onTap: () => {
+      closePause();
+      openGuide(game);
+    },
+  });
+  howto.position.set(10, y);
+  box.addChild(howto);
   y += 36;
 
   if (inRun) {

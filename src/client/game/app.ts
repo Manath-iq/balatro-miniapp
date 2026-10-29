@@ -72,7 +72,9 @@ export class Game {
     } catch {}
     setLang(saved === 'ru' || saved === 'en' ? saved : lang());
     setupTelegram(CSS.night1);
-    await document.fonts.load('8px Tiny5').catch(() => undefined);
+    await Promise.all(
+      ['8px Tiny5', '11px Pixelify'].map((f) => document.fonts.load(f, 'Aa Жж').catch(() => undefined)),
+    );
     await loadArt().catch(() => undefined);
     this.screen = measure(this.root);
     await this.pixi.init({

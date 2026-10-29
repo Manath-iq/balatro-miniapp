@@ -7,6 +7,7 @@ import { formatPower } from '../../i18n/format';
 import type { Game, Scene } from '../app';
 import { sfx } from '../feel';
 import { Spring } from '../fx';
+import { guideSeen, openGuide } from '../guide';
 import { ApiFail, api, online } from '../net';
 import { openPause } from '../pause';
 import { text } from '../pixel';
@@ -147,7 +148,7 @@ export function menuScene(game: Game): Scene {
       new Button(t('menu.howto'), 150, 26, {
         onTap: () => {
           resetTutorial();
-          say(t('tut.select'), C.paper1);
+          openGuide(game);
         },
       }),
     );
@@ -193,6 +194,7 @@ export function menuScene(game: Game): Scene {
 
   showMain();
   sfx('bell');
+  if (!guideSeen()) openGuide(game);
   let time = 0;
   const pulse = new Spring(1, 120, 0.3);
   return {

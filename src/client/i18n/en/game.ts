@@ -77,7 +77,7 @@ export default {
   'misc.tokens': 'tokens',
   'misc.deck': 'DECK {n}',
   'menu.top': 'LEADERBOARD',
-  'menu.howto': 'TUTORIAL',
+  'menu.howto': 'HOW TO PLAY',
   'menu.offline': 'Outside Telegram: this run is unranked',
   'menu.dailyTaken': 'Daily route done. A new one tomorrow!',
   'menu.loading': 'Connecting…',
@@ -121,4 +121,35 @@ export default {
   'btn.share': 'SHARE',
   'share.run': '🚋 I rode {stops} stops on the Last Tram, best hand {peak}. Can you go further?',
   'share.daily': '🚋 Last Tram daily route: {stops} stops, best hand {peak}. Your turn!',
+  'guide.prev': '◀ BACK',
+  'guide.next': 'NEXT ▶',
+  'guide.done': "LET'S GO!",
+  'guide.pic.target': '150 of 200 W done',
+  'guide.pic.od': '30: OVERDRIVE ready',
+  'guide.pic.blow': '100: BLOWOUT',
+  'guide.lore.title': 'LAST TRAM',
+  'guide.lore.body':
+    'Midnight. The city sleeps, rain runs down the glass. You drive the very last tram and must bring it to the Depot by dawn: 12 stops on three lines. The tram runs on power, and power comes from poker hands.',
+  'guide.cards.title': 'CARDS',
+  'guide.cards.body':
+    'You hold 7 cards. Pick 1 to 5 and make a poker hand: pair, two pair, three of a kind, straight, flush, full house, four of a kind... Stronger hands give more power. Drag cards to reorder them, flick a card up to play it at once.',
+  'guide.power.title': 'POWER',
+  'guide.power.body':
+    'CURRENT (orange) = the hand base + the values of the cards in it: 2-10 face value, J 11, Q 12, K 13, A 14.\nVOLTAGE (purple) = the multiplier. Passengers, Seniority and the Green Wave raise it.',
+  'guide.stop.title': 'THE STOP',
+  'guide.stop.body':
+    'The stop target in watts is at the top. You have 4 hands (PLAY) and 3 discards (DISCARD swaps cards you do not need). Reach the target to ride on and earn tokens. Run out of hands short of it and the ride is over.',
+  'guide.gauge.title': 'THE GAUGE: OVERDRIVE',
+  'guide.gauge.body':
+    'Played cards add sparks to the gauge on the right. From 30 you can fire OVERDRIVE: the hand is multiplied by the gauge, e.g. ×1.6 at 60, and the gauge empties. Reach 100 and you get a BLOWOUT: lose a hand. The gauge halves between stops.',
+  'guide.wave.title': 'SENIORITY AND GREEN WAVE',
+  'guide.wave.body':
+    'Every hand type builds Seniority: the more pairs you play, the stronger pairs get.\nPlay the same hand type again and the Green Wave grows: +1 Voltage per repeat, up to +4. Switch hand types and the wave resets.',
+  'guide.kiosk.title': 'KIOSK AND PASSENGERS',
+  'guide.kiosk.body':
+    'After each stop you visit the kiosk. Spend tokens ◉ on passengers: each powers up your hands in their own way, tap one to read it. The cabin has 6 seats. There are also tickets (one-off boosts), card punching and scrap. SHIFT refreshes the belt.',
+  'guide.boss.title': 'INSPECTORS AND RANKINGS',
+  'guide.boss.body':
+    'An inspector with their own rules waits at the end of every line; you can read them on the route map in advance. Beat them and pick a passenger as a reward. After the Depot you can keep riding the Ring line.\nThe DAILY ROUTE is the same for everyone: compare yourself with friends on the LEADERBOARD!',
+  'pause.howto': 'HOW TO PLAY',
 } as const satisfies Record<string, string>;

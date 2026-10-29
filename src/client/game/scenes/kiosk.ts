@@ -154,9 +154,9 @@ export function kioskScene(game: Game): Scene {
       const textW = W - 76 - nx;
       const n = text(info.name, { color: info.color, fit: textW });
       n.position.set(nx, 3);
-      const d = text(info.desc, { color: C.paper1, wrap: textW });
+      const d = text(info.desc, { size: 8, color: C.paper1, wrap: textW });
       d.position.set(nx, 21);
-      const h = Math.max(face ? 46 : 36, 25 + d.height);
+      const h = Math.max(face ? 46 : 36, 24 + d.height);
       row.addChild(panel(W, h, C.night2, info.color, C.night3));
       if (face) {
         const fp = new Sprite(face);
